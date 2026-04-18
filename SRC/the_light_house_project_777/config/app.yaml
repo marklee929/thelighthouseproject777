@@ -1,0 +1,16 @@
+workdir: "./data"
+
+models:
+  text: "qwen3:8b"
+  coder: "qwen3-coder"
+  reasoning: "deepseek-r1:8b"
+
+routing:
+  chat: "text"
+  create: "coder"
+  modify: "coder"
+  delete: "reasoning"
+  default: "text"
+
+permissions:
+  file_roots: ["./"]

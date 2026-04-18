@@ -1,0 +1,378 @@
+<!-- the_light_house_project_777/web/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ project_name }} Interface</title>
+    <link rel="stylesheet" href="/static/style.css?v=3">
+    {% if mode != 'pyqle' %}
+    <link rel="stylesheet" href="/static/crew_dashboard.css?v=3">
+    {% endif %}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css">
+</head>
+<body data-project-root="{{ project_root }}" data-project-name="{{ project_name }}">
+    <script>
+      window.__APP_PROJECT_ROOT__ = {{ project_root|tojson }};
+      window.__APP_PROJECT_NAME__ = {{ project_name|tojson }};
+      window.__PYQLE_AVAILABLE__ = {{ pyqle_available|tojson }};
+    </script>
+    {% if mode == 'pyqle' %}
+    <div class="container container-pyqle">
+      <div class="panel file-explorer">
+        <div id="file-tree"></div>
+      </div>
+
+      <div class="panel code-editor">
+        <div class="center-controls" id="center-controls">
+          <button id="center-pause" class="center-btn">Pause</button>
+          <button id="center-copy-200" class="center-btn">Copy last 200</button>
+          <button id="center-copy-1000" class="center-btn">Copy last 1000</button>
+          <div class="center-indicator" id="center-indicator" role="button" aria-label="Expand log controls" tabindex="0"></div>
+        </div>
+        <div class="center-toast" id="center-toast" role="status" aria-live="polite"></div>
+        <pre><code id="code-content"></code></pre>
+      </div>
+
+      <div class="resizer" id="resizer"></div>
+
+      <div class="panel right-panel">
+        <div class="chat-window">
+          <div class="messages"></div>
+          <div class="log-status" id="log-status">LIVE</div>
+          <div class="chat-input-container">
+            <div class="chat-input">
+              <input type="text" id="message-input" placeholder="Type a message...">
+              <button id="send-button">Send</button>
+            </div>
+
+            <div class="mode-buttons">
+              <button class="mode-btn active" data-mode="chat">Chat</button>
+              <button class="mode-btn" data-mode="create">Create</button>
+              <button class="mode-btn" data-mode="modify">Modify</button>
+              <button class="mode-btn" data-mode="delete">Delete</button>
+            </div>
+          </div>
+        </div>
+        <div class="pyqle-console" id="pyqle-console">
+          <div class="pyqle-console-title">PyQle-Console</div>
+          <div class="pyqle-loop-actions">
+            <button id="pyqle-loop-start" class="pyqle-loop-btn primary">Start</button>
+            <button id="pyqle-loop-stop" class="pyqle-loop-btn" disabled>Stop</button>
+          </div>
+          <div class="pyqle-meditation">
+            <div class="pyqle-meditation-title">Meditation (v3)</div>
+            <div class="pyqle-loop-actions">
+              <button id="meditation-start" class="pyqle-loop-btn primary">Meditation Start</button>
+              <button id="meditation-stop" class="pyqle-loop-btn">Meditation Stop</button>
+            </div>
+          </div>
+          <div class="pyqle-row">
+            <label class="pyqle-toggle">
+              <input type="checkbox" id="pyqle-enabled" checked />
+              <span>pyqle on</span>
+            </label>
+            <label class="pyqle-toggle">
+              <input type="checkbox" id="pyqle-multiple" />
+              <span>multiple</span>
+            </label>
+            <label class="pyqle-toggle">
+              <input type="checkbox" id="pyqle-return-all" />
+              <span>return-all</span>
+            </label>
+            <label class="pyqle-toggle pyqle-loop">
+              <input type="checkbox" id="pyqle-loop" />
+              <span>loop</span>
+            </label>
+          </div>
+          <div class="pyqle-row">
+            <label class="pyqle-radio">
+              <input type="radio" name="pyqle-mode" id="pyqle-mode-question" value="question" checked />
+              <span>question (v1)</span>
+            </label>
+            <label class="pyqle-radio">
+              <input type="radio" name="pyqle-mode" id="pyqle-mode-correction" value="correction" />
+              <span>correction (llama on)</span>
+            </label>
+            <label class="pyqle-radio">
+              <input type="radio" name="pyqle-mode" id="pyqle-mode-chat" value="chat" />
+              <span>chat (llama off)</span>
+            </label>
+            <label class="pyqle-radio">
+              <input type="radio" name="pyqle-mode" id="pyqle-mode-learn" value="learn" />
+              <span>learning chunk</span>
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="/static/script.js?v=3"></script>
+    {% else %}
+    <div class="container container-crew" id="crew-root">
+      <!-- Left panel: module control and activation toggles. -->
+      <aside class="crew-sidebar" id="crew-sidebar">
+        <section class="crew-card crew-quick-actions" id="crew-quick-actions">
+          <h2 class="crew-section-title">Quick Actions</h2>
+          <div class="crew-quick-action-grid">
+            <button class="crew-quick-action-btn" data-action="New Task">New Task</button>
+            <button class="crew-quick-action-btn" data-action="Generate Thread">Generate Facebook Post</button>
+            <button class="crew-quick-action-btn" data-action="Research Topic">Collect News</button>
+            <button class="crew-quick-action-btn" data-action="Publish">Publish</button>
+          </div>
+        </section>
+
+        <section class="crew-card crew-modules-panel" id="crew-modules-panel">
+          <h2 class="crew-section-title">Module Control Panel</h2>
+          <div class="crew-modules" id="crew-modules">
+            <button class="crew-module-item is-inactive" data-module="Social" aria-pressed="false">
+              <span class="module-icon">SO</span>
+              <span class="module-meta">
+                <span class="module-name">Social</span>
+                <span class="module-state-text module-status-idle">idle</span>
+              </span>
+              <span class="crew-module-led led-idle" data-led></span>
+            </button>
+            <button class="crew-module-item is-inactive" data-module="Research" aria-pressed="false">
+              <span class="module-icon">RS</span>
+              <span class="module-meta">
+                <span class="module-name">Research</span>
+                <span class="module-state-text module-status-idle">idle</span>
+              </span>
+              <span class="crew-module-led led-idle" data-led></span>
+            </button>
+            <button class="crew-module-item is-inactive" data-module="Content" aria-pressed="false">
+              <span class="module-icon">CT</span>
+              <span class="module-meta">
+                <span class="module-name">Content</span>
+                <span class="module-state-text module-status-idle">idle</span>
+              </span>
+              <span class="crew-module-led led-idle" data-led></span>
+            </button>
+            <button class="crew-module-item is-inactive" data-module="Market" aria-pressed="false">
+              <span class="module-icon">MK</span>
+              <span class="module-meta">
+                <span class="module-name">Market</span>
+                <span class="module-state-text module-status-idle">idle</span>
+              </span>
+              <span class="crew-module-led led-idle" data-led></span>
+            </button>
+            <button class="crew-module-item is-inactive" data-module="Search" aria-pressed="false">
+              <span class="module-icon">SE</span>
+              <span class="module-meta">
+                <span class="module-name">Search</span>
+                <span class="module-state-text module-status-idle">idle</span>
+              </span>
+              <span class="crew-module-led led-idle" data-led></span>
+            </button>
+            <button class="crew-module-item is-inactive" data-module="Automation" aria-pressed="false">
+              <span class="module-icon">AU</span>
+              <span class="module-meta">
+                <span class="module-name">Automation</span>
+                <span class="module-state-text module-status-idle">idle</span>
+              </span>
+              <span class="crew-module-led led-idle" data-led></span>
+            </button>
+          </div>
+        </section>
+      </aside>
+
+      <!-- Center panel: queue, global logs, and live command input. -->
+      <main class="crew-main" id="crew-main">
+        <section class="crew-card task-queue" id="task-queue">
+          <div class="crew-card-header">
+            <h2 class="crew-section-title">Task Queue</h2>
+            <span class="queue-summary">8 Tasks</span>
+          </div>
+          <ul class="task-queue-list" id="task-queue-list">
+            <li class="task-queue-item completed">
+              <span class="task-indicator completed-indicator"></span>
+              <span class="task-name">Connect Facebook Page</span>
+              <span class="task-state-label">completed</span>
+            </li>
+            <li class="task-queue-item running">
+              <span class="task-indicator running-indicator"></span>
+              <span class="task-name">Collect News</span>
+              <span class="task-state-label status-running">running</span>
+            </li>
+            <li class="task-queue-item pending">
+              <span class="task-indicator pending-indicator"></span>
+              <span class="task-name">Filter Relevant Articles</span>
+              <span class="task-state-label">pending</span>
+            </li>
+            <li class="task-queue-item pending">
+              <span class="task-indicator pending-indicator"></span>
+              <span class="task-name">Summarize Article</span>
+              <span class="task-state-label">pending</span>
+            </li>
+            <li class="task-queue-item pending">
+              <span class="task-indicator pending-indicator"></span>
+              <span class="task-name">Generate Candidate Facebook Post</span>
+              <span class="task-state-label">pending</span>
+            </li>
+            <li class="task-queue-item pending">
+              <span class="task-indicator pending-indicator"></span>
+              <span class="task-name">Multi-Agent Review</span>
+              <span class="task-state-label">pending</span>
+            </li>
+            <li class="task-queue-item pending">
+              <span class="task-indicator pending-indicator"></span>
+              <span class="task-name">Review Publish Card</span>
+              <span class="task-state-label">pending</span>
+            </li>
+            <li class="task-queue-item pending">
+              <span class="task-indicator pending-indicator"></span>
+              <span class="task-name">Manual Approve</span>
+              <span class="task-state-label">pending</span>
+            </li>
+            <li class="task-queue-item pending">
+              <span class="task-indicator pending-indicator"></span>
+              <span class="task-name">Publish to Facebook</span>
+              <span class="task-state-label">pending</span>
+            </li>
+          </ul>
+        </section>
+
+        <section class="crew-card global-log" id="global-log">
+          <div class="crew-card-header">
+            <h2 class="crew-section-title">Global Log</h2>
+            <div class="log-filter-group" id="log-filter-group">
+              <button class="log-filter-btn is-active" data-filter="all">ALL</button>
+              <button class="log-filter-btn" data-filter="agent">AGENT</button>
+              <button class="log-filter-btn" data-filter="system">SYSTEM</button>
+              <button class="log-filter-btn" data-filter="preview">PREVIEW</button>
+              <button class="log-filter-btn" data-filter="publish">PUBLISH</button>
+              <button class="log-filter-btn" data-filter="growth">GROWTH</button>
+              <button class="log-filter-btn" data-filter="follow">FOLLOW</button>
+              <button class="log-filter-btn" data-filter="error">ERROR</button>
+            </div>
+          </div>
+          <!-- Future backend logs can be appended into this container. -->
+          <div class="global-log-box" id="global-log-box">
+            <div class="global-log-line" data-type="system">[SYSTEM] Ollama connected</div>
+            <div class="global-log-line" data-type="agent">[AGENT] Research Agent started</div>
+            <div class="global-log-line" data-type="agent">[AGENT] Searching topic: AI agents</div>
+            <div class="global-log-line" data-type="system">[SYSTEM] Queue updated</div>
+            <div class="global-log-line" data-type="preview">[PREVIEW] Waiting user approval</div>
+            <div class="global-log-line" data-type="publish">[PUBLISH] Publishing to Facebook</div>
+            <div class="global-log-line" data-type="growth">[GROWTH] Candidate sent to Telegram</div>
+            <div class="global-log-line" data-type="follow">[FOLLOW] Approved follow executed</div>
+            <div class="global-log-line" data-type="error">[ERROR] Retry scheduled</div>
+            <div class="global-log-line" data-type="agent">[AGENT] Content Agent waiting for sources</div>
+          </div>
+        </section>
+
+        <section class="crew-card publish-review" id="publish-review">
+          <div class="crew-card-header">
+            <h2 class="crew-section-title">Publish Review Cards</h2>
+            <span class="queue-summary" id="publish-review-count">0 Pending</span>
+          </div>
+          <p class="publish-review-empty" id="publish-review-empty">No reviewed news candidates ready for manual publish review.</p>
+          <div class="publish-review-list" id="publish-review-list"></div>
+        </section>
+
+        <section class="crew-card command-console" id="command-console">
+          <h2 class="crew-section-title">Live Command Input</h2>
+          <p class="command-help">Examples: /social collect news | /social review latest | /social generate facebook posts | /content generate workconnect clips | /social publish facebook</p>
+          <div class="command-response" id="crew-command-response">Command Console ready.</div>
+          <!-- Future backend command route can bind to this form submission. -->
+          <form class="command-form" id="crew-command-form">
+            <input
+              type="text"
+              id="crew-command-input"
+              autocomplete="off"
+              placeholder="/content generate workconnect clips"
+            >
+            <button type="submit" id="crew-command-send">Send</button>
+          </form>
+        </section>
+      </main>
+
+      <!-- Right panel: runtime health and activity state cards. -->
+      <aside class="crew-rightpanel" id="crew-rightpanel">
+        <section class="crew-card system-monitor" id="system-monitor">
+          <h2 class="crew-section-title">System Monitor</h2>
+          <dl class="system-monitor-grid">
+            <div><dt>Model</dt><dd>local-router</dd></div>
+            <div><dt>Ollama</dt><dd class="state-ok">running</dd></div>
+            <div><dt>Agents active</dt><dd>3</dd></div>
+            <div><dt>Queue</dt><dd>4 tasks</dd></div>
+            <div><dt>Memory</dt><dd>4.2GB</dd></div>
+          </dl>
+        </section>
+
+        <section class="crew-card agent-status" id="agent-status">
+          <h2 class="crew-section-title">Agent Status</h2>
+          <ul class="agent-status-list" id="agent-status-list">
+            <li>
+              <span class="agent-name">Social Agent</span>
+              <span class="agent-badge status-generating">generating</span>
+            </li>
+            <li>
+              <span class="agent-name">Research Agent</span>
+              <span class="agent-badge status-searching">searching</span>
+            </li>
+            <li>
+              <span class="agent-name">Content Agent</span>
+              <span class="agent-badge status-idle">idle</span>
+            </li>
+            <li>
+              <span class="agent-name">Review Agent</span>
+              <span class="agent-badge status-complete">complete</span>
+            </li>
+            <li>
+              <span class="agent-name">Publisher</span>
+              <span class="agent-badge status-retrying">retrying</span>
+            </li>
+          </ul>
+        </section>
+
+        <section class="crew-card selected-module-config" id="selected-module-config-panel">
+          <h2 class="crew-section-title">Selected Module Config</h2>
+          <div class="selected-module-config-content" id="selected-module-config-content"></div>
+        </section>
+
+        <section class="crew-card current-activity" id="current-activity">
+          <h2 class="crew-section-title">Current Activity</h2>
+          <ul class="activity-lines" id="activity-lines">
+            <li>Generating social thread...</li>
+            <li>Searching sources...</li>
+            <li>Waiting for next task...</li>
+          </ul>
+        </section>
+      </aside>
+    </div>
+    <div class="crew-modal-overlay" id="draft-preview-modal" aria-hidden="true">
+      <div class="crew-modal" role="dialog" aria-modal="true" aria-labelledby="draft-preview-title">
+        <h2 class="crew-section-title" id="draft-preview-title">Draft Preview</h2>
+        <div class="draft-preview-meta-grid">
+          <div class="config-group">
+            <label class="config-label" for="draft-preview-category-input">Category</label>
+            <input type="text" id="draft-preview-category-input" class="config-input" readonly>
+          </div>
+          <div class="config-group">
+            <label class="config-label" for="draft-preview-source-link-input">Source Link</label>
+            <input type="text" id="draft-preview-source-link-input" class="config-input" readonly>
+          </div>
+        </div>
+        <label class="config-label" for="draft-preview-article-title-input">Original Article Title</label>
+        <input type="text" id="draft-preview-article-title-input" class="config-input" readonly>
+        <div class="draft-preview-thumbnail-wrap is-hidden" id="draft-preview-thumbnail-wrap">
+          <img id="draft-preview-thumbnail" class="draft-preview-thumbnail" alt="article thumbnail">
+        </div>
+        <label class="config-label" for="draft-preview-title-input">Generated Title</label>
+        <input type="text" id="draft-preview-title-input" class="config-input" readonly>
+        <label class="config-label" for="draft-preview-body-input">Generated Body</label>
+        <textarea id="draft-preview-body-input" class="config-textarea" rows="8" readonly></textarea>
+        <div class="modal-actions">
+          <button type="button" class="crew-btn ghost" id="draft-preview-edit-btn">Edit</button>
+          <button type="button" class="crew-btn primary" id="draft-preview-continue-btn">Continue</button>
+          <button type="button" class="crew-btn danger" id="draft-preview-stop-btn">Stop</button>
+        </div>
+      </div>
+    </div>
+    <script src="/static/crew_dashboard_ui_state.js?v=1"></script>
+    <script src="/static/crew_dashboard.js?v=22"></script>
+    {% endif %}
+</body>
+</html>

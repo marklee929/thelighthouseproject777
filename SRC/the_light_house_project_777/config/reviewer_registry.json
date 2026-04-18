@@ -1,0 +1,49 @@
+{
+  "registry_version": 1,
+  "reviewers": [
+    {
+      "reviewer_code": "reviewer_1",
+      "display_name": "Reviewer 1",
+      "telegram_chat_id_env": "LIGHTHOUSE_REVIEWER_1_CHAT_ID",
+      "telegram_username": "",
+      "active": true,
+      "metadata": {
+        "team": "facebook_review",
+        "slot": 1
+      }
+    },
+    {
+      "reviewer_code": "reviewer_2",
+      "display_name": "Reviewer 2",
+      "telegram_chat_id_env": "LIGHTHOUSE_REVIEWER_2_CHAT_ID",
+      "telegram_username": "",
+      "active": true,
+      "metadata": {
+        "team": "facebook_review",
+        "slot": 2
+      }
+    },
+    {
+      "reviewer_code": "reviewer_3",
+      "display_name": "Reviewer 3",
+      "telegram_chat_id_env": "LIGHTHOUSE_REVIEWER_3_CHAT_ID",
+      "telegram_username": "",
+      "active": true,
+      "metadata": {
+        "team": "facebook_review",
+        "slot": 3
+      }
+    },
+    {
+      "reviewer_code": "reviewer_4",
+      "display_name": "Reviewer 4",
+      "telegram_chat_id_env": "LIGHTHOUSE_REVIEWER_4_CHAT_ID",
+      "telegram_username": "",
+      "active": true,
+      "metadata": {
+        "team": "facebook_review",
+        "slot": 4
+      }
+    }
+  ]
+}

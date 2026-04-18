@@ -1,0 +1,284 @@
+{
+  "registry_version": 1,
+  "registry_source": "DOC/documents/christian_news_collection.docx",
+  "generated_at": "2026-04-15T00:00:00Z",
+  "sources": [
+    {
+      "source_code": "christian_post",
+      "source_name": "Christian Post",
+      "source_type": "christian_news_rss",
+      "site_url": "https://www.christianpost.com",
+      "language_code": "en",
+      "region_code": "global",
+      "status": "active",
+      "metadata": {
+        "docx_section": "Global / Multi-Region Sources",
+        "docx_reference": "Explicit RSS URL"
+      },
+      "feeds": [
+        {
+          "feed_code": "main",
+          "feed_name": "Main RSS",
+          "feed_url": "https://www.christianpost.com/rss-feed.html",
+          "site_url": "https://www.christianpost.com",
+          "feed_format": "rss",
+          "category": "christian_news",
+          "language_code": "en",
+          "region_code": "global",
+          "enabled": true,
+          "status": "active",
+          "notes": "Explicit RSS URL from DOCX.",
+          "metadata": {
+            "registry_origin": "docx"
+          }
+        }
+      ]
+    },
+    {
+      "source_code": "vatican_news",
+      "source_name": "Vatican News",
+      "source_type": "christian_news_rss",
+      "site_url": "https://www.vaticannews.va/en.html",
+      "language_code": "en",
+      "region_code": "global",
+      "status": "active",
+      "metadata": {
+        "docx_section": "Global / Multi-Region Sources"
+      },
+      "feeds": [
+        {
+          "feed_code": "global_en",
+          "feed_name": "English Global Feed",
+          "feed_url": "https://www.vaticannews.va/en.rss.xml",
+          "site_url": "https://www.vaticannews.va/en.html",
+          "feed_format": "rss",
+          "category": "christian_news",
+          "language_code": "en",
+          "region_code": "global",
+          "enabled": true,
+          "status": "active",
+          "notes": "Feed autodiscovered from the Vatican News English homepage listed in the DOCX.",
+          "metadata": {
+            "registry_origin": "docx+autodiscovery"
+          }
+        },
+        {
+          "feed_code": "africa_en",
+          "feed_name": "Africa Feed",
+          "feed_url": "https://www.vaticannews.va/en/africa.rss.xml",
+          "site_url": "https://www.vaticannews.va/en/africa.html",
+          "feed_format": "rss",
+          "category": "christian_news",
+          "language_code": "en",
+          "region_code": "africa",
+          "enabled": true,
+          "status": "active",
+          "notes": "Regional RSS endpoint resolved from the DOCX Africa section.",
+          "metadata": {
+            "registry_origin": "docx+autodiscovery"
+          }
+        },
+        {
+          "feed_code": "asia_en",
+          "feed_name": "Asia Feed",
+          "feed_url": "",
+          "site_url": "https://www.vaticannews.va/en/asia.html",
+          "feed_format": "unknown",
+          "category": "christian_news",
+          "language_code": "en",
+          "region_code": "asia",
+          "enabled": false,
+          "status": "discovery_required",
+          "notes": "DOCX lists the Asia section, but no stable RSS endpoint was confirmed during registry seeding.",
+          "metadata": {
+            "registry_origin": "docx",
+            "action_required": "confirm_asia_feed_url"
+          }
+        }
+      ]
+    },
+    {
+      "source_code": "christianity_today",
+      "source_name": "Christianity Today",
+      "source_type": "christian_news_rss",
+      "site_url": "https://www.christianitytoday.com",
+      "language_code": "en",
+      "region_code": "north_america",
+      "status": "active",
+      "metadata": {
+        "docx_section": "North America"
+      },
+      "feeds": [
+        {
+          "feed_code": "main",
+          "feed_name": "Main Feed",
+          "feed_url": "https://www.christianitytoday.com/feed/",
+          "site_url": "https://www.christianitytoday.com",
+          "feed_format": "rss",
+          "category": "christian_news",
+          "language_code": "en",
+          "region_code": "north_america",
+          "enabled": true,
+          "status": "active",
+          "notes": "Feed autodiscovered from the DOCX homepage entry.",
+          "metadata": {
+            "registry_origin": "docx+autodiscovery"
+          }
+        }
+      ]
+    },
+    {
+      "source_code": "relevant_magazine",
+      "source_name": "Relevant Magazine",
+      "source_type": "christian_news_rss",
+      "site_url": "https://www.relevantmagazine.com",
+      "language_code": "en",
+      "region_code": "north_america",
+      "status": "active",
+      "metadata": {
+        "docx_section": "North America"
+      },
+      "feeds": [
+        {
+          "feed_code": "main",
+          "feed_name": "Main Feed",
+          "feed_url": "https://relevantmagazine.com/feed/",
+          "site_url": "https://www.relevantmagazine.com",
+          "feed_format": "rss",
+          "category": "christian_news",
+          "language_code": "en",
+          "region_code": "north_america",
+          "enabled": true,
+          "status": "active",
+          "notes": "Feed autodiscovered from the DOCX homepage entry.",
+          "metadata": {
+            "registry_origin": "docx+autodiscovery"
+          }
+        }
+      ]
+    },
+    {
+      "source_code": "premier_christian_news",
+      "source_name": "Premier Christian News",
+      "source_type": "christian_news_rss",
+      "site_url": "https://premierchristian.news",
+      "language_code": "en",
+      "region_code": "europe",
+      "status": "discovery_required",
+      "metadata": {
+        "docx_section": "Europe"
+      },
+      "feeds": [
+        {
+          "feed_code": "main",
+          "feed_name": "Main Feed",
+          "feed_url": "",
+          "site_url": "https://premierchristian.news",
+          "feed_format": "unknown",
+          "category": "christian_news",
+          "language_code": "en",
+          "region_code": "europe",
+          "enabled": false,
+          "status": "discovery_required",
+          "notes": "DOCX lists the site, but an accessible RSS endpoint was not confirmed during registry seeding.",
+          "metadata": {
+            "registry_origin": "docx",
+            "action_required": "confirm_feed_url"
+          }
+        }
+      ]
+    },
+    {
+      "source_code": "evangelical_focus",
+      "source_name": "Evangelical Focus Europe",
+      "source_type": "christian_news_rss",
+      "site_url": "https://evangelicalfocus.com",
+      "language_code": "en",
+      "region_code": "europe",
+      "status": "discovery_required",
+      "metadata": {
+        "docx_section": "Europe"
+      },
+      "feeds": [
+        {
+          "feed_code": "main",
+          "feed_name": "Main Feed",
+          "feed_url": "",
+          "site_url": "https://evangelicalfocus.com",
+          "feed_format": "unknown",
+          "category": "christian_news",
+          "language_code": "en",
+          "region_code": "europe",
+          "enabled": false,
+          "status": "discovery_required",
+          "notes": "The DOCX source was preserved, but no machine-consumable RSS endpoint was verified.",
+          "metadata": {
+            "registry_origin": "docx",
+            "action_required": "confirm_feed_url"
+          }
+        }
+      ]
+    },
+    {
+      "source_code": "uca_news",
+      "source_name": "UCA News",
+      "source_type": "christian_news_rss",
+      "site_url": "https://www.ucanews.com",
+      "language_code": "en",
+      "region_code": "asia",
+      "status": "verification_required",
+      "metadata": {
+        "docx_section": "Asia"
+      },
+      "feeds": [
+        {
+          "feed_code": "main",
+          "feed_name": "Main Feed",
+          "feed_url": "https://www.ucanews.com/rss",
+          "site_url": "https://www.ucanews.com",
+          "feed_format": "rss",
+          "category": "christian_news",
+          "language_code": "en",
+          "region_code": "asia",
+          "enabled": false,
+          "status": "verification_required",
+          "notes": "Homepage links to /rss, but automated verification returned 403 during registry seeding.",
+          "metadata": {
+            "registry_origin": "docx+autodiscovery",
+            "action_required": "validate_bot_access"
+          }
+        }
+      ]
+    },
+    {
+      "source_code": "all_africa",
+      "source_name": "AllAfrica Religion",
+      "source_type": "christian_news_rss",
+      "site_url": "https://allafrica.com",
+      "language_code": "en",
+      "region_code": "africa",
+      "status": "active",
+      "metadata": {
+        "docx_section": "Africa"
+      },
+      "feeds": [
+        {
+          "feed_code": "religion_headlines",
+          "feed_name": "Religion Headlines RDF",
+          "feed_url": "https://allafrica.com/tools/headlines/rdf/religion/headlines.rdf",
+          "site_url": "https://allafrica.com",
+          "feed_format": "rdf",
+          "category": "christian_news",
+          "language_code": "en",
+          "region_code": "africa",
+          "enabled": true,
+          "status": "active",
+          "notes": "Explicit RDF feed URL from DOCX.",
+          "metadata": {
+            "registry_origin": "docx"
+          }
+        }
+      ]
+    }
+  ]
+}

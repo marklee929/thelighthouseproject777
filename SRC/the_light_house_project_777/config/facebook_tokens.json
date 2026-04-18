@@ -1,0 +1,19 @@
+{
+  "app_id": "919205584256665",
+  "app_secret": "e8e74b5f6b51e637d7f9e22d2888dc47",
+  "user_long_lived_access_token": "EAANEAzpTPpkBRLRkHmQWZBYPiII7aDFVTeFphVp1DSZCe2L2Qe020EoEnZCfw9ThYUOkA9vF43485Cw4BUiDrI4ZBEa4rOwxxNJ3d7SQXq7kn9R1ZAu4EsWFalVEciyuqACeAFtgA7UnZCB2Ukuwcm7HOYyA1ZBJFcuHgDcjJc7L7S26gf1yeVZCmRl3ZBoEb5KX9rbQDH7IyBrymQv8412XbKBNnhwXO31Q7ReyumK2r3D47TeeyICkR4xx8LhS77OFepreKJZBThclWZA2xheFgZDZD",
+  "user_access_token": "EAANEAzpTPpkBRLRkHmQWZBYPiII7aDFVTeFphVp1DSZCe2L2Qe020EoEnZCfw9ThYUOkA9vF43485Cw4BUiDrI4ZBEa4rOwxxNJ3d7SQXq7kn9R1ZAu4EsWFalVEciyuqACeAFtgA7UnZCB2Ukuwcm7HOYyA1ZBJFcuHgDcjJc7L7S26gf1yeVZCmRl3ZBoEb5KX9rbQDH7IyBrymQv8412XbKBNnhwXO31Q7ReyumK2r3D47TeeyICkR4xx8LhS77OFepreKJZBThclWZA2xheFgZDZD",
+  "page_id": "810804142117301",
+  "page_access_token": "EAANEAzpTPpkBRLRkHmQWZBYPiII7aDFVTeFphVp1DSZCe2L2Qe020EoEnZCfw9ThYUOkA9vF43485Cw4BUiDrI4ZBEa4rOwxxNJ3d7SQXq7kn9R1ZAu4EsWFalVEciyuqACeAFtgA7UnZCB2Ukuwcm7HOYyA1ZBJFcuHgDcjJc7L7S26gf1yeVZCmRl3ZBoEb5KX9rbQDH7IyBrymQv8412XbKBNnhwXO31Q7ReyumK2r3D47TeeyICkR4xx8LhS77OFepreKJZBThclWZA2xheFgZDZD",
+  "page_name": "WorkConnect Korea",
+  "token_status": "EXPIRED",
+  "token_status_detail": "Error validating access token: Session has expired on Tuesday, 24-Mar-26 07:00:00 PDT. The current time is Tuesday, 24-Mar-26 07:04:14 PDT. | User-token page-token refresh failed: Error validating access token: Session has expired on Tuesday, 24-Mar-26 07:00:00 PDT. The current time is Tuesday, 24-Mar-26 07:04:14 PDT.",
+  "platform_status": "TOKEN_EXPIRED",
+  "platform_status_detail": "Error validating access token: Session has expired on Tuesday, 24-Mar-26 07:00:00 PDT. The current time is Tuesday, 24-Mar-26 07:04:14 PDT. | User-token page-token refresh failed: Error validating access token: Session has expired on Tuesday, 24-Mar-26 07:00:00 PDT. The current time is Tuesday, 24-Mar-26 07:04:14 PDT.",
+  "token_error_code": 190,
+  "token_error_subcode": 463,
+  "granted_permissions": [],
+  "last_error": "Error validating access token: Session has expired on Tuesday, 24-Mar-26 07:00:00 PDT. The current time is Tuesday, 24-Mar-26 07:04:14 PDT. | User-token page-token refresh failed: Error validating access token: Session has expired on Tuesday, 24-Mar-26 07:00:00 PDT. The current time is Tuesday, 24-Mar-26 07:04:14 PDT.",
+  "last_validated_at": "2026-03-24T14:04:17.010015+00:00",
+  "updated_at": "2026-03-24T14:04:17.010015+00:00"
+}

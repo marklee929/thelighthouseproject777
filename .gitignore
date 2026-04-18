@@ -1,0 +1,62 @@
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc.*
+
+# Virtual environments
+/.venv_lh777/
+.venv/
+venv/
+env/
+ENV/
+
+# Environment and local configuration
+.env
+.env.*
+!.envSample
+.config/
+
+# Tool caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Build and packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+
+# IDE and OS files
+.idea/
+.vscode/
+Thumbs.db
+Desktop.ini
+
+# Logs and runtime files
+logs/
+*.log
+*.pid
+*.tmp
+
+# Project-local runtime and temporary outputs
+.appdata/
+temp/
+reports/
+data/
+
+# Explicit app-local paths under SRC
+/SRC/the_light_house_project_777/.venv/
+/SRC/the_light_house_project_777/.env
+/SRC/the_light_house_project_777/.config/
+/SRC/the_light_house_project_777/.appdata/
+/SRC/the_light_house_project_777/logs/
+/SRC/the_light_house_project_777/reports/
+/SRC/the_light_house_project_777/temp/
+/SRC/the_light_house_project_777/data/

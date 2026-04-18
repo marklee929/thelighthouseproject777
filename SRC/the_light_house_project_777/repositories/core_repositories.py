@@ -10,6 +10,22 @@ def _json_payload(value: Any) -> str:
     return json.dumps(value or {}, ensure_ascii=False)
 
 
+def _source_status(value: Any) -> str:
+    status = str(value or "active").strip() or "active"
+    if status in {"active", "paused", "discovery_required"}:
+        return status
+    if status == "verification_required":
+        return "discovery_required"
+    return "active"
+
+
+def _feed_status(value: Any) -> str:
+    status = str(value or "active").strip() or "active"
+    if status in {"active", "paused", "discovery_required", "verification_required"}:
+        return status
+    return "active"
+
+
 class PostgresSourceRepository:
     def __init__(self, connection_factory: PostgresConnectionFactory) -> None:
         self.connection_factory = connection_factory
@@ -47,7 +63,7 @@ class PostgresSourceRepository:
             source.get("site_url"),
             source.get("language_code", "en"),
             source.get("region_code", "global"),
-            source.get("status", "active"),
+            _source_status(source.get("status", "active")),
             _json_payload(source.get("metadata")),
         )
         with self.connection_factory.connect() as conn:
@@ -107,7 +123,7 @@ class PostgresRssFeedRepository:
             feed.get("feed_language_code", "en"),
             feed.get("feed_region_code", "global"),
             bool(feed.get("enabled", True)),
-            feed.get("feed_status", "active"),
+            _feed_status(feed.get("feed_status", "active")),
             feed.get("notes", ""),
             _json_payload(feed.get("feed_metadata")),
         )
@@ -116,6 +132,144 @@ class PostgresRssFeedRepository:
                 cur.execute(query, params)
                 row = cur.fetchone()
         return str(row["rss_feed_id"])
+
+    def list_managed_feeds(self, enabled_only: bool = False) -> list[dict[str, Any]]:
+        query = """
+            SELECT
+                f.rss_feed_id,
+                f.source_id,
+                s.source_code,
+                s.source_name,
+                s.source_type,
+                s.site_url,
+                s.language_code,
+                s.region_code,
+                s.status,
+                s.metadata_json,
+                f.feed_code,
+                f.feed_name,
+                f.feed_url,
+                f.site_url AS feed_site_url,
+                f.feed_format,
+                f.category,
+                f.language_code AS feed_language_code,
+                f.region_code AS feed_region_code,
+                f.enabled,
+                f.status AS feed_status,
+                f.notes,
+                f.metadata_json AS feed_metadata,
+                f.created_at,
+                f.updated_at,
+                COALESCE((f.metadata_json ->> 'deleted')::boolean, false) AS deleted
+            FROM core.rss_feeds AS f
+            JOIN core.sources AS s
+              ON s.source_id = f.source_id
+            WHERE COALESCE((f.metadata_json ->> 'deleted')::boolean, false) = false
+        """
+        params: list[Any] = []
+        if enabled_only:
+            query += " AND f.enabled = true"
+        query += " ORDER BY f.enabled DESC, s.source_name ASC, f.feed_name ASC"
+        with self.connection_factory.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(query, tuple(params))
+                rows = cur.fetchall() or []
+        return [dict(row) for row in rows]
+
+    def find_feed_by_url(self, feed_url: str) -> Optional[dict[str, Any]]:
+        query = """
+            SELECT
+                f.rss_feed_id,
+                f.source_id,
+                s.source_code,
+                s.source_name,
+                f.feed_code,
+                f.feed_name,
+                f.feed_url,
+                f.enabled,
+                f.status AS feed_status,
+                f.metadata_json AS feed_metadata
+            FROM core.rss_feeds AS f
+            JOIN core.sources AS s
+              ON s.source_id = f.source_id
+            WHERE f.feed_url = %s
+            LIMIT 1
+        """
+        with self.connection_factory.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(query, (feed_url,))
+                row = cur.fetchone()
+        return dict(row) if row else None
+
+    def get_feed_by_id(self, rss_feed_id: str) -> Optional[dict[str, Any]]:
+        query = """
+            SELECT
+                f.rss_feed_id,
+                f.source_id,
+                s.source_code,
+                s.source_name,
+                s.site_url,
+                f.feed_code,
+                f.feed_name,
+                f.feed_url,
+                f.site_url AS feed_site_url,
+                f.feed_format,
+                f.category,
+                f.language_code AS feed_language_code,
+                f.region_code AS feed_region_code,
+                f.enabled,
+                f.status AS feed_status,
+                f.notes,
+                f.metadata_json AS feed_metadata
+            FROM core.rss_feeds AS f
+            JOIN core.sources AS s
+              ON s.source_id = f.source_id
+            WHERE f.rss_feed_id = %s
+        """
+        with self.connection_factory.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(query, (rss_feed_id,))
+                row = cur.fetchone()
+        return dict(row) if row else None
+
+    def update_feed_connection(self, rss_feed_id: str, enabled: bool) -> None:
+        query = """
+            UPDATE core.rss_feeds
+            SET enabled = %s,
+                status = %s,
+                metadata_json = COALESCE(metadata_json, '{}'::jsonb) - 'deleted',
+                updated_at = CURRENT_TIMESTAMP
+            WHERE rss_feed_id = %s
+        """
+        status = "active" if enabled else "paused"
+        with self.connection_factory.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(query, (enabled, status, rss_feed_id))
+
+    def archive_feed(self, rss_feed_id: str) -> None:
+        query = """
+            UPDATE core.rss_feeds
+            SET enabled = false,
+                status = 'paused',
+                metadata_json = jsonb_set(COALESCE(metadata_json, '{}'::jsonb), '{deleted}', 'true'::jsonb, true),
+                updated_at = CURRENT_TIMESTAMP
+            WHERE rss_feed_id = %s
+        """
+        with self.connection_factory.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(query, (rss_feed_id,))
+
+    def count_articles_for_feed(self, rss_feed_id: str) -> int:
+        query = """
+            SELECT COUNT(*) AS article_count
+            FROM core.articles
+            WHERE rss_feed_id = %s
+        """
+        with self.connection_factory.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(query, (rss_feed_id,))
+                row = cur.fetchone()
+        return int(row["article_count"]) if row else 0
 
 
 class PostgresArticleRepository:

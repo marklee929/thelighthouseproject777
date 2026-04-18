@@ -7,6 +7,7 @@ from repositories.interfaces import ArticleRepositoryProtocol, ArticleReviewRepo
 from services.review.facebook_candidate_queue import FacebookCandidateQueueService
 
 from .candidate_projection import build_news_collector_candidate
+from .selection_policy import apply_selection_policy
 
 
 def _now_utc() -> datetime:
@@ -28,8 +29,10 @@ class NewsCollectorReviewService:
         self.facebook_candidate_queue_service = facebook_candidate_queue_service
 
     def list_candidates(self, limit: int = 24) -> list[dict[str, Any]]:
-        rows = self.article_repository.list_news_collector_candidates(limit)
-        return [build_news_collector_candidate(row) for row in rows]
+        fetch_limit = max(limit * 6, 48)
+        rows = self.article_repository.list_news_collector_candidates(fetch_limit)
+        selected_rows = apply_selection_policy(rows, limit=limit, max_age_hours=1, bucket_minutes=10)
+        return [build_news_collector_candidate(row) for row in selected_rows]
 
     def approve_candidate(self, article_id: str, payload: Mapping[str, Any]) -> dict[str, Any]:
         article = self.article_repository.get_article_by_id(article_id)
@@ -66,6 +69,17 @@ class NewsCollectorReviewService:
         )
         self.article_repository.update_review_status(article_id, "bad")
         self.article_repository.update_selection_status(article_id, "review_rejected")
+        return {"ok": True, "article_review_id": review_id}
+
+    def drop_candidate(self, article_id: str, payload: Mapping[str, Any]) -> dict[str, Any]:
+        article = self.article_repository.get_article_by_id(article_id)
+        if not article:
+            return {"ok": False, "error": "article_not_found"}
+        review_id = self.article_review_repository.create_review(
+            self._build_review_record(article_id=article_id, decision="drop", action="drop", payload=payload)
+        )
+        self.article_repository.update_review_status(article_id, "dropped")
+        self.article_repository.update_selection_status(article_id, "review_dropped")
         return {"ok": True, "article_review_id": review_id}
 
     def _build_review_record(

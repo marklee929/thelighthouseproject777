@@ -85,9 +85,9 @@ def route(
     # 1) Determine state
     if mode == 'chat':
         context.state = S.QUICK.value
-    elif any(k in user_text for k in ["검색", "찾아줘", "링크", "최신", "뉴스"]):
+    elif any(k in user_text for k in ["\uAC80\uC0C9", "\uCC3E\uC544\uC918", "\uB9C1\uD06C", "\uCD5C\uC2E0", "\uB274\uC2A4"]):
         context.state = S.SEARCHING.value
-    elif any(k in user_text for k in ["코드", "함수", "리팩토링", "개선", "문서", "파일", "작성", "만들", "생성"]):
+    elif any(k in user_text for k in ["\uCF54\uB4DC", "\uD568\uC218", "\uB9AC\uD329\uD1A0\uB9C1", "\uAC1C\uC120", "\uBB38\uC11C", "\uD30C\uC77C", "\uC791\uC131", "\uB9CC\uB4E4", "\uC0DD\uC131"]):
         context.state = S.WORKING.value
     else:
         context.state = S.MEETING.value
@@ -108,7 +108,7 @@ def route(
         _emit('log', {'event': 'tool_fallback', 'text': "Tool not allowed, falling back to web search."})
         hits = web_search(user_text, 5)
         context.artifacts["search"] = hits
-        out = f"검색어로 관련 정보를 찾았습니다:\n{json.dumps(hits, indent=2, ensure_ascii=False)}"
+        out = f"Related information found for the search query:\n{json.dumps(hits, indent=2, ensure_ascii=False)}"
         context.artifacts["final"] = out
     else:
         _emit('log', {'event': 'crew_kickoff', 'text': "Handing over to crew session..."})

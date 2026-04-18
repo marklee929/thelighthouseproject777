@@ -5,8 +5,8 @@ from typing import List
 
 from project_meta import PROJECT_ROOT, SOURCE_ROOT
 
-# 허용된 루트 경로 목록 (main.py에서 주입)
-# 보안을 위해 파일 접근은 이 경로들 아래로만 제한됩니다.
+# Allowed root path list injected from main.py.
+# File access is restricted to these directories for safety.
 ALLOWED_ROOTS: List[Path] = []
 
 def _format_roots() -> str:
@@ -31,7 +31,7 @@ _init_default_roots()
 
 def set_allowed_roots(roots: List[str]):
     """
-    파일 접근이 허용된 루트 디렉토리 목록을 설정합니다.
+    Set the list of root directories allowed for file access.
     """
     global ALLOWED_ROOTS
     if not roots:
@@ -40,7 +40,7 @@ def set_allowed_roots(roots: List[str]):
 
 def _is_path_allowed(path: Path) -> bool:
     """
-    주어진 경로가 허용된 루트 경로 하위에 있는지 확인합니다.
+    Check whether the given path is inside one of the allowed roots.
     """
     if not ALLOWED_ROOTS:
         return False
@@ -53,8 +53,8 @@ def _is_path_allowed(path: Path) -> bool:
 
 def write_text(file_path: str, content: str) -> str:
     """
-    지정된 경로에 텍스트 파일을 작성합니다.
-    경로는 ALLOWED_ROOTS 하위에 있어야 합니다.
+    Write a text file to the specified path.
+    The path must be inside ALLOWED_ROOTS.
     """
     if not ALLOWED_ROOTS:
         raise PermissionError(
@@ -77,8 +77,8 @@ def write_text(file_path: str, content: str) -> str:
 
 def read_file(file_path: str) -> str:
     """
-    지정된 경로의 텍스트 파일 내용을 읽어옵니다.
-    경로는 ALLOWED_ROOTS 하위에 있어야 합니다.
+    Read the text contents of the specified file path.
+    The path must be inside ALLOWED_ROOTS.
     """
     if not ALLOWED_ROOTS:
         raise PermissionError(

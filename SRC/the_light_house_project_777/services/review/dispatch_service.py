@@ -8,6 +8,7 @@ from repositories.interfaces import (
     ReviewerRepositoryProtocol,
     TelegramReviewDispatchRepositoryProtocol,
 )
+from services.news_collector.selection_policy import apply_selection_policy
 
 from .message_builder import TelegramArticleReviewMessageBuilder
 from .reviewer_registry import ReviewerRegistryLoader
@@ -36,10 +37,11 @@ class TelegramCandidateDispatchService:
     def sync_reviewers(self) -> List[Dict[str, Any]]:
         return self.reviewer_registry_loader.sync_reviewers(self.reviewer_repository)
 
-    def dispatch_top_candidates(self, limit: int = 10, min_final_score: float = 60.0) -> List[Dict[str, Any]]:
+    def dispatch_top_candidates(self, limit: int = 1, min_final_score: float = 60.0) -> List[Dict[str, Any]]:
         self.sync_reviewers()
         reviewers = [row for row in self.reviewer_repository.list_active_reviewers() if str(row.get("telegram_chat_id", "")).strip()]
-        articles = self.article_repository.list_articles_for_selection_review(limit, min_final_score)
+        articles = self.article_repository.list_articles_for_selection_review(max(limit * 6, 24), min_final_score)
+        articles = apply_selection_policy(articles, limit=limit, max_age_hours=1, bucket_minutes=10)
         results: List[Dict[str, Any]] = []
         for article in articles:
             article_sent = False

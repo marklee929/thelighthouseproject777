@@ -1,7 +1,7 @@
-from .candidate_projection import build_news_collector_candidate
-from .service import NewsCollectorReviewService
-
 __all__ = [
+    "NewsCollectorCollectionService",
+    "NewsCollectorFeedManagementService",
     "NewsCollectorReviewService",
+    "apply_selection_policy",
     "build_news_collector_candidate",
 ]

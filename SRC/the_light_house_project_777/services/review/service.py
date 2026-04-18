@@ -27,7 +27,7 @@ class TelegramReviewService:
     def sync_reviewers(self) -> List[Dict[str, Any]]:
         return self.dispatch_service.sync_reviewers()
 
-    def send_top_candidates(self, limit: int = 10, min_score: float = 60.0) -> List[Dict[str, Any]]:
+    def send_top_candidates(self, limit: int = 1, min_score: float = 60.0) -> List[Dict[str, Any]]:
         return self.dispatch_service.dispatch_top_candidates(limit=limit, min_final_score=min_score)
 
     def poll_decisions(self, limit: int = 20) -> List[Dict[str, Any]]:

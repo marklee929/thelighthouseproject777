@@ -56,15 +56,18 @@ class ArticleAnalysisService:
 
     def analyze_article(self, article: Dict[str, Any]) -> Dict[str, Any]:
         prompt = self.prompt_builder.build_prompt(article)
-        llm_response = run_local_model(
-            task_type="review_news",
-            prompt=prompt,
-            model=self.model_name,
-            ollama_base_url=self.ollama_base_url,
-            format="json",
-            timeout=60.0,
-            temperature=0.1,
-        )
+        try:
+            llm_response = run_local_model(
+                task_type="review_news",
+                prompt=prompt,
+                model=self.model_name,
+                ollama_base_url=self.ollama_base_url,
+                format="json",
+                timeout=60.0,
+                temperature=0.1,
+            )
+        except Exception as exc:
+            llm_response = {"ok": False, "error": f"{type(exc).__name__}: {exc}", "raw": "", "parsed": None}
         llm_analysis = self._parse_llm_response(llm_response)
         fallback_analysis = self._fallback_analysis(article)
         merged = self._merge_analysis(fallback_analysis, llm_analysis)

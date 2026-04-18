@@ -1,18 +1,18 @@
 from duckduckgo_search import DDGS
 from typing import List, Dict, Any
 
-# 허용된 도메인 목록 (main.py에서 주입)
+# Allowed domain list injected from main.py.
 ALLOWED_DOMAINS: List[str] = []
 
 def web_search(query: str, num_results: int = 5) -> List[Dict[str, Any]]:
     """
-    DuckDuckGo를 사용하여 웹을 검색하고 결과를 반환합니다.
-    ALLOWED_DOMAINS가 설정된 경우, 해당 도메인의 결과만 필터링합니다.
+    Search the web with DuckDuckGo and return the results.
+    If ALLOWED_DOMAINS is configured, only results from those domains are returned.
     """
     results = []
     print(f"Searching web for: {query}")
     with DDGS() as ddgs:
-        search_results = ddgs.text(query, max_results=num_results * 2) # 필터링을 위해 더 많이 가져옴
+        search_results = ddgs.text(query, max_results=num_results * 2)  # Fetch extra results for filtering.
         for r in search_results:
             if len(results) >= num_results:
                 break

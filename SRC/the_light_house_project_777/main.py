@@ -131,8 +131,17 @@ from repositories import (
     PostgresArticleReviewRepository,
     PostgresConnectionFactory,
     PostgresGeneratedContentRepository,
+    PostgresIngestionRunRepository,
+    PostgresRssFeedRepository,
+    PostgresSourceRepository,
+    PostgresSystemConfigRepository,
 )
-from services.news_collector import NewsCollectorReviewService
+from integrations.rss import ArticleContentClient, RssFeedClient, RssFeedRegistryLoader
+from services.analysis import ArticleAnalysisService
+from services.ingestion.service import RssIngestionService
+from services.news_collector.collection import NewsCollectorCollectionService
+from services.news_collector.feed_management import NewsCollectorFeedManagementService
+from services.news_collector.service import NewsCollectorReviewService
 from services.review import FacebookCandidateQueueService
 from social_automation import SocialAutomationService
 boot_trace("imports complete")
@@ -206,10 +215,38 @@ POSTGRES_CONNECTION_FACTORY = PostgresConnectionFactory.from_env()
 POSTGRES_ARTICLE_REPOSITORY = PostgresArticleRepository(POSTGRES_CONNECTION_FACTORY)
 POSTGRES_ARTICLE_REVIEW_REPOSITORY = PostgresArticleReviewRepository(POSTGRES_CONNECTION_FACTORY)
 POSTGRES_GENERATED_CONTENT_REPOSITORY = PostgresGeneratedContentRepository(POSTGRES_CONNECTION_FACTORY)
+POSTGRES_SOURCE_REPOSITORY = PostgresSourceRepository(POSTGRES_CONNECTION_FACTORY)
+POSTGRES_RSS_FEED_REPOSITORY = PostgresRssFeedRepository(POSTGRES_CONNECTION_FACTORY)
+POSTGRES_INGESTION_RUN_REPOSITORY = PostgresIngestionRunRepository(POSTGRES_CONNECTION_FACTORY)
+POSTGRES_SYSTEM_CONFIG_REPOSITORY = PostgresSystemConfigRepository(POSTGRES_CONNECTION_FACTORY)
+RSS_FEED_REGISTRY_LOADER = RssFeedRegistryLoader()
+RSS_FEED_CLIENT = RssFeedClient()
+RSS_ARTICLE_CONTENT_CLIENT = ArticleContentClient()
+ARTICLE_ANALYSIS_SERVICE = ArticleAnalysisService(article_repository=POSTGRES_ARTICLE_REPOSITORY)
+RSS_INGESTION_SERVICE = RssIngestionService(
+    registry_loader=RSS_FEED_REGISTRY_LOADER,
+    feed_client=RSS_FEED_CLIENT,
+    article_client=RSS_ARTICLE_CONTENT_CLIENT,
+    source_repository=POSTGRES_SOURCE_REPOSITORY,
+    rss_feed_repository=POSTGRES_RSS_FEED_REPOSITORY,
+    article_repository=POSTGRES_ARTICLE_REPOSITORY,
+    ingestion_run_repository=POSTGRES_INGESTION_RUN_REPOSITORY,
+)
 FACEBOOK_CANDIDATE_QUEUE_SERVICE = FacebookCandidateQueueService(
     article_repository=POSTGRES_ARTICLE_REPOSITORY,
     article_review_repository=POSTGRES_ARTICLE_REVIEW_REPOSITORY,
     generated_content_repository=POSTGRES_GENERATED_CONTENT_REPOSITORY,
+)
+NEWS_COLLECTOR_FEED_MANAGEMENT_SERVICE = NewsCollectorFeedManagementService(
+    registry_loader=RSS_FEED_REGISTRY_LOADER,
+    source_repository=POSTGRES_SOURCE_REPOSITORY,
+    rss_feed_repository=POSTGRES_RSS_FEED_REPOSITORY,
+    system_config_repository=POSTGRES_SYSTEM_CONFIG_REPOSITORY,
+)
+NEWS_COLLECTOR_COLLECTION_SERVICE = NewsCollectorCollectionService(
+    rss_feed_repository=POSTGRES_RSS_FEED_REPOSITORY,
+    ingestion_service=RSS_INGESTION_SERVICE,
+    analysis_service=ARTICLE_ANALYSIS_SERVICE,
 )
 NEWS_COLLECTOR_REVIEW_SERVICE = NewsCollectorReviewService(
     article_repository=POSTGRES_ARTICLE_REPOSITORY,
@@ -631,9 +668,9 @@ def generate_auto_sentence() -> str:
         return "이 문장 은 띄어쓰기 가 이상 하다"
 
     seed_kw = random.choice(pick)[2]
-    related = _pick_related_keywords(seed_kw, k=24)  # 넉넉히
+    related = _pick_related_keywords(seed_kw, k=24)  # Leave extra room for filtering.
 
-    # 중복/허브 제거 + 순서 유지
+    # Remove duplicates and hub terms while preserving order.
     seen = set()
     words = []
     for w in [seed_kw] + related:
@@ -646,10 +683,10 @@ def generate_auto_sentence() -> str:
             continue
         seen.add(wn)
         words.append(w)
-        if len(words) >= 24:  # 최대 상한
+        if len(words) >= 24:  # Hard upper bound.
             break
 
-    # 너무 짧으면 보정: 추가 후보로 채우거나 실패 시 fallback
+    # If the result is too short, backfill with additional candidates or fall back.
     if len(words) < 2:
         extras = [kw for _mc, _avg, kw in pick if kw and _norm_kw(kw) not in seen]
         for kw in extras:
@@ -973,15 +1010,15 @@ def _learn_stream_items(path: str, start_idx: int = 0):
 def _learn_classify(item: Any) -> Optional[Dict[str, Any]]:
     if not isinstance(item, dict):
         return None
-    # 스키마: 질문/대답
+    # Schema: question/answer.
     if "질문" in item and "대답" in item:
         return {"type": "qa", "q": item.get("질문"), "a": item.get("대답"), "meta": {k: v for k, v in item.items() if k not in ("질문", "대답")}}
 
-    # 스키마: 입력/출력 (출력이 문자열) → prompt
+    # Schema: input/output where output is a string -> prompt.
     if "입력" in item and "출력" in item and isinstance(item.get("출력"), str):
         inp = item.get("입력")
         meta = {k: v for k, v in item.items() if k not in ("입력", "출력")}
-        # 입력에서 tone/domain/goal/freq 파싱 (간단 정규식)
+        # Parse tone/domain/goal/freq from the input using simple regex rules.
         if isinstance(inp, str):
             tone = None
             domain = None
@@ -1008,7 +1045,7 @@ def _learn_classify(item: Any) -> Optional[Dict[str, Any]]:
                 meta["입력_raw"] = inp
         return {"type": "prompt", "prompt": item.get("출력"), "meta": meta}
 
-    # 스키마: 입력/출력 (출력이 list) → rm
+    # Schema: input/output where output is a list -> reward model samples.
     if "입력" in item and "출력" in item and isinstance(item.get("출력"), list):
         inp = item.get("입력") or {}
         q = ""
@@ -1026,7 +1063,7 @@ def _learn_classify(item: Any) -> Optional[Dict[str, Any]]:
         meta = {k: v for k, v in item.items() if k not in ("입력", "출력")}
         return {"type": "rm", "q": q, "cands": cands, "meta": meta}
 
-    # 기타: 기존 영어 스키마도 유지
+    # Miscellaneous: keep the existing English schema support.
     if "input" in item and "output" in item:
         return {"type": "qa", "q": item.get("input"), "a": item.get("output"), "meta": {k: v for k, v in item.items() if k not in ("input", "output")}}
     if "prompt" in item and ("chosen" in item or "rejected" in item):
@@ -1462,6 +1499,70 @@ def crew_news_collector_candidates():
         return jsonify({"ok": False, "error": str(exc)}), 500
 
 
+@app.route('/api/crew/news-collector/feeds', methods=['GET'])
+def crew_news_collector_feeds():
+    try:
+        items = NEWS_COLLECTOR_FEED_MANAGEMENT_SERVICE.list_feeds()
+        connected_count = sum(1 for item in items if item.get("enabled"))
+        return jsonify({"ok": True, "items": items, "count": len(items), "connected_count": connected_count}), 200
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
+
+@app.route('/api/crew/news-collector/feeds/add', methods=['POST'])
+def crew_news_collector_add_feed():
+    payload = request.get_json(force=True, silent=True) or {}
+    try:
+        result = NEWS_COLLECTOR_FEED_MANAGEMENT_SERVICE.add_feed(payload)
+        status_code = 200 if result.get("ok") else 400
+        return jsonify(result), status_code
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
+
+@app.route('/api/crew/news-collector/feeds/delete', methods=['POST'])
+def crew_news_collector_delete_feed():
+    payload = request.get_json(force=True, silent=True) or {}
+    rss_feed_id = str(payload.get("rss_feed_id", "") or "").strip()
+    if not rss_feed_id:
+        return jsonify({"ok": False, "error": "rss_feed_id_required"}), 400
+    try:
+        result = NEWS_COLLECTOR_FEED_MANAGEMENT_SERVICE.delete_feed(rss_feed_id)
+        status_code = 200 if result.get("ok") else 400
+        return jsonify(result), status_code
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
+
+@app.route('/api/crew/news-collector/feeds/connection', methods=['POST'])
+def crew_news_collector_feed_connection():
+    payload = request.get_json(force=True, silent=True) or {}
+    rss_feed_id = str(payload.get("rss_feed_id", "") or "").strip()
+    if not rss_feed_id:
+        return jsonify({"ok": False, "error": "rss_feed_id_required"}), 400
+    enabled = bool(payload.get("enabled"))
+    try:
+        result = NEWS_COLLECTOR_FEED_MANAGEMENT_SERVICE.set_connection(rss_feed_id, enabled)
+        status_code = 200 if result.get("ok") else 400
+        return jsonify(result), status_code
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
+
+@app.route('/api/crew/news-collector/collect', methods=['POST'])
+def crew_news_collector_collect():
+    payload = request.get_json(force=True, silent=True) or {}
+    try:
+        result = NEWS_COLLECTOR_COLLECTION_SERVICE.collect_latest(
+            item_limit=payload.get("item_limit"),
+            recent_hours=payload.get("recent_hours"),
+        )
+        status_code = 200 if result.get("ok") else 400
+        return jsonify(result), status_code
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
+
 @app.route('/api/crew/news-collector/approve', methods=['POST'])
 def crew_news_collector_approve():
     payload = request.get_json(force=True, silent=True) or {}
@@ -1498,6 +1599,20 @@ def crew_news_collector_reject():
         return jsonify({"ok": False, "error": "article_id_required"}), 400
     try:
         result = NEWS_COLLECTOR_REVIEW_SERVICE.reject_candidate(article_id, payload)
+        status_code = 200 if result.get("ok") else 400
+        return jsonify(result), status_code
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
+
+@app.route('/api/crew/news-collector/drop', methods=['POST'])
+def crew_news_collector_drop():
+    payload = request.get_json(force=True, silent=True) or {}
+    article_id = str(payload.get("article_id", "") or "").strip()
+    if not article_id:
+        return jsonify({"ok": False, "error": "article_id_required"}), 400
+    try:
+        result = NEWS_COLLECTOR_REVIEW_SERVICE.drop_candidate(article_id, payload)
         status_code = 200 if result.get("ok") else 400
         return jsonify(result), status_code
     except Exception as exc:
@@ -2486,10 +2601,10 @@ def ws():
                         loop_on = bool(p.get("loop", False))
                         pyqle_log("info", "route decision start", {"stage": "mode_decide", "session_id": getattr(ws_context, "session_id", "unknown")})
 
-                        # question 모드: v1 경로로 위임
+                        # Question mode: delegate to the v1 path.
                         if mode == "question":
                             if loop_on:
-                                # v1 자율 루프 시작 (session_id 종속, 단일 실행)
+                                # Start the v1 autonomous loop (session_id scoped, single run).
                                 _start_v1_loop(session_id_for_log, max_steps=3)
                                 emit_log('agent_chat', {'agent': 'System', 'message': 'Starting PyQLE autonomous loop...'})
                                 return
@@ -2512,7 +2627,7 @@ def ws():
                                 _run_learn(session_id_for_log, loop_on=False)
                             return
 
-                        # pyqle 계열 모드(chat / correction / pyqle)
+                        # PyQle family modes (chat / correction / pyqle).
                         pyqle_modes = {"pyqle", "chat", "correction"}
                         if mode not in pyqle_modes:
                             ctx = route(ws_context, p, emit=emit_log)
@@ -2521,7 +2636,7 @@ def ws():
                             ws.send(json.dumps({"type": "final_result", "data": str(final_result_obj)}))
                             return
 
-                        # /pyqle 커맨드로 들어온 경우 옵션/본문 추출
+                        # When invoked through the /pyqle command, extract options and body text.
                         clean_text, cmd_opt = parse_pyqle_cmd(question_raw)
                         if question_raw.strip().startswith("/pyqle"):
                             opt = cmd_opt or opt
@@ -2723,13 +2838,13 @@ def ws():
                             correction_inflight.pop(session_id, None)
                             return
 
-                        # 모드별 기본값: chat은 llama OFF 기본, 나머지는 ON
+                        # Per-mode defaults: chat starts with llama OFF, the rest start with it ON.
                         if mode == "chat":
                             opt.setdefault("llama", False)
                         else:
                             opt.setdefault("llama", True)
 
-                        # 옵션 기본값 적용 후 다시 llama/multi 등을 계산한다.
+                        # Recompute llama/multi and related flags after applying option defaults.
                         llama = bool(opt.get("llama", True))
                         search = bool(opt.get("search", False))
                         multi = bool(opt.get("multi", False))

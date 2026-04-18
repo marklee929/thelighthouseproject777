@@ -273,26 +273,26 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   const TEXT = {
-    fileReadError: (err) => `파일을 읽지 못했습니다: ${err}`,
-    fileTreeError: (err) => `파일 트리를 불러오지 못했습니다: ${err}`,
-    connected: '서버에 성공적으로 연결되었습니다.',
-    unknownType: (type) => `알 수 없는 응답 유형입니다: ${type}`,
-    nonJson: (data) => `JSON 형식이 아닌 메시지를 받았습니다: ${data}`,
-    wsError: '웹소켓 오류가 발생했습니다. 잠시 후 다시 연결을 시도합니다.',
-    connectionClosed: (code, reasonText) => `서버와의 연결이 종료되었습니다. (code: ${code})${reasonText}`,
-    reasonSuffix: (reason) => ` (사유: ${reason})`,
-    fileCreateFail: '파일 생성에 실패했습니다.',
-    created: (path) => `생성됨: ${path}`,
-    selectForModify: '수정할 파일을 먼저 선택하세요.',
-    fileModifyFail: '파일 수정에 실패했습니다.',
-    modified: (path) => `수정됨: ${path}`,
-    selectForDelete: '삭제할 파일을 먼저 선택하세요.',
-    fileDeleteFail: '파일 삭제에 실패했습니다.',
-    deleted: (path) => `삭제됨: ${path}`,
-    reconnecting: '웹소켓 연결을 재시도 중입니다. 잠시 후 다시 시도해 주세요.',
-    processing: '요청을 처리하는 중입니다...',
-    unknownCodeLabel: '알 수 없음',
-    uiCreatedHeader: '# UI에서 생성됨\n'
+    fileReadError: (err) => `Failed to read file: ${err}`,
+    fileTreeError: (err) => `Failed to load file tree: ${err}`,
+    connected: 'Connected to the server successfully.',
+    unknownType: (type) => `Unknown response type: ${type}`,
+    nonJson: (data) => `Received a non-JSON message: ${data}`,
+    wsError: 'A WebSocket error occurred. Reconnecting shortly.',
+    connectionClosed: (code, reasonText) => `Connection to the server was closed. (code: ${code})${reasonText}`,
+    reasonSuffix: (reason) => ` (reason: ${reason})`,
+    fileCreateFail: 'Failed to create file.',
+    created: (path) => `Created: ${path}`,
+    selectForModify: 'Select a file to modify first.',
+    fileModifyFail: 'Failed to modify file.',
+    modified: (path) => `Modified: ${path}`,
+    selectForDelete: 'Select a file to delete first.',
+    fileDeleteFail: 'Failed to delete file.',
+    deleted: (path) => `Deleted: ${path}`,
+    reconnecting: 'Retrying the WebSocket connection. Please wait a moment.',
+    processing: 'Processing request...',
+    unknownCodeLabel: 'Unknown',
+    uiCreatedHeader: '# Created from UI\n'
   };
 
   const wsScheme = location.protocol === 'https:' ? 'wss' : 'ws';
@@ -476,7 +476,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     const mode = currentPyqleMode();
     if (mode === 'chat') {
-      alert('chat 모드에서는 loop를 시작할 수 없습니다.');
+      alert('Loop mode cannot be started while chat mode is selected.');
       setLoopButtons(false);
       return;
     }
@@ -581,13 +581,13 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
 
-    // 기본값: 기존 모드(v1 등) 그대로
+    // Default: preserve the existing mode behavior (including v1).
     let mode = currentMode;
     const options = { llama: true, search: false, multi: false, return_all: false };
     let questionText = rawText;
     const loopOn = pyqleLoop && pyqleLoop.checked;
 
-    // PyQle 콘솔이 켜져 있으면 모드/옵션을 콘솔 상태로 덮어쓴다.
+    // If the PyQle console is enabled, override mode and options from the console state.
     const pyqleOn = pyqleEnabled && pyqleEnabled.checked;
     const multipleOn = pyqleMultiple && pyqleMultiple.checked;
     const returnAllOn = pyqleReturnAll && pyqleReturnAll.checked;
@@ -597,9 +597,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (pyqleOn) {
       if (isQuestionRadio) {
-        // v1-trigger: 서버에서 v1/pyqle 분기 그대로 사용 (mode=question)
+        // v1 trigger: let the server keep the existing v1/pyqle branch handling (mode=question).
         mode = "question";
-        // options는 의미 없지만 payload 형식 맞추기 위해 기본값 유지
+        // Options are not used here, but keep the default shape for payload compatibility.
       } else if (isCorrectionRadio) {
         mode = "correction";
         options.llama = true;
@@ -617,7 +617,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const payload = { question: questionText, mode, options, targets: [] };
     if (mode === 'question' || mode === 'pyqle') {
-      payload.loop = loopOn && !isChatRadio; // chat 모드에서는 무시
+      payload.loop = loopOn && !isChatRadio; // Ignore loop mode when chat mode is selected.
     }
     ws.send(JSON.stringify(payload));
     addMessage({ agent: 'You', message: `[${mode}] ${questionText}` }, 'chat');
@@ -627,18 +627,18 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
 
-  // 맨 아래 부분 교체
+  // Replace the bottom submit handling with shared sendMessage behavior.
   sendButton.addEventListener('click', (e) => {
     e.preventDefault();
     sendMessage();
   });
 
   messageInput.addEventListener('keydown', (e) => {
-    // 한글 입력 중(조합 상태)면 무시
+    // Ignore Enter while an IME composition is in progress.
     if (e.isComposing || e.keyCode === 229) return;
 
     if (e.key === 'Enter') {
-      e.preventDefault();   // 폼 submit / 기본 동작 막기
+      e.preventDefault();   // Prevent form submit and default Enter behavior.
       sendMessage();
     }
   });
@@ -677,10 +677,10 @@ document.addEventListener('DOMContentLoaded', () => {
       const action = btn.dataset.action;
       const focusText = traceFocus.textContent && traceFocus.textContent !== '-' ? traceFocus.textContent.split(',')[0].trim() : '';
       let prompt = '';
-      if (action === 'define') prompt = focusText ? `${focusText} 정의를 한 문장으로` : '대상 키워드 정의를 한 문장으로';
-      if (action === 'examples') prompt = focusText ? `${focusText} 예시 3개` : '대상 키워드 예시 3개';
-      if (action === 'compare') prompt = focusText ? `${focusText} vs ` : '비교하고 싶은 두 키워드를 적어줘: A vs B';
-      if (action === 'counter') prompt = focusText ? `${focusText}에 대한 반대 관점 2개` : '주제에 대한 반대 관점 2개';
+      if (action === 'define') prompt = focusText ? `Define ${focusText} in one sentence` : 'Define the target keyword in one sentence';
+      if (action === 'examples') prompt = focusText ? `Give 3 examples of ${focusText}` : 'Give 3 examples of the target keyword';
+      if (action === 'compare') prompt = focusText ? `Compare ${focusText} vs ` : 'Write the two keywords you want to compare: A vs B';
+      if (action === 'counter') prompt = focusText ? `Give 2 counter perspectives on ${focusText}` : 'Give 2 counter perspectives on the topic';
       if (prompt) {
         messageInput.value = prompt;
         messageInput.focus();

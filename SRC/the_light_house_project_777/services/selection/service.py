@@ -22,7 +22,7 @@ class Phase1ArticleSelectionService:
         self,
         *,
         analysis_limit: int = 20,
-        dispatch_limit: int = 10,
+        dispatch_limit: int = 1,
         min_final_score: float = 60.0,
     ) -> Dict[str, Any]:
         analysis_results = self.analysis_service.analyze_candidates(limit=analysis_limit)

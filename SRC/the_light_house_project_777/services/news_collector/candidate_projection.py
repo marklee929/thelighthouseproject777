@@ -77,8 +77,10 @@ def build_news_collector_candidate(row: Mapping[str, Any]) -> dict[str, Any]:
         "pld_fit_score": row.get("pld_fit_score"),
         "operational_score": row.get("operational_score"),
         "final_score": row.get("final_score"),
+        "popularity_proxy": row.get("popularity_proxy"),
+        "age_minutes": row.get("age_minutes"),
         "dominant_pld_stage": str(row.get("dominant_pld_stage") or "").strip(),
         "selection_summary": _clean_text(row.get("selection_summary")),
-        "why_selected": _clean_text(row.get("selection_summary")),
+        "why_selected": _clean_text(row.get("selection_summary") or row.get("selection_gate_reason")),
         "latest_review_decision": str(row.get("latest_review_decision") or "").strip(),
     }

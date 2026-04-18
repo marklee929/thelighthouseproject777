@@ -33,7 +33,7 @@ class WriteFileInput(BaseModel):
 
 class FileWriteTool(BaseTool):
     name: str = "Write File"
-    description: str = "지정된 경로에 텍스트 파일을 생성하거나 덮어씁니다. 상위 폴더가 없으면 자동으로 생성합니다."
+    description: str = "Create or overwrite a text file at the given path. Missing parent directories are created automatically."
     args_schema: Type[BaseModel] = WriteFileInput
 
     def _run(self, file_path: str, content: str) -> str:
@@ -46,7 +46,7 @@ class ReadFileInput(BaseModel):
 
 class FileReadTool(BaseTool):
     name: str = "Read File"
-    description: str = "지정된 경로의 파일 내용을 읽어옵니다."
+    description: str = "Read the contents of the file at the given path."
     args_schema: Type[BaseModel] = ReadFileInput
 
     def _run(self, file_path: str) -> str:
@@ -134,25 +134,25 @@ def run_session(
     agent_tools = [file_read_tool, file_write_tool] if tool_allowed else []
 
     # Define Agents
-    master = Agent(role="마스터", goal="요청 분해·배분 후 결론 도출", backstory="팀 리더", llm=active_llm, allow_delegation=True, verbose=True)
-    senior = Agent(role="선배 코더", goal="설계/코드 제안과 리팩토링", backstory="경험 많은 엔지니어", llm=active_llm, verbose=True, tools=agent_tools)
-    appr = Agent(role="견습 분석가", goal="근거 정리·리스크 점검·요약", backstory="빠른 요약 담당", llm=active_llm, verbose=True)
+    master = Agent(role="Master", goal="Break down the request, assign work, and produce the conclusion", backstory="Team lead", llm=active_llm, allow_delegation=True, verbose=True)
+    senior = Agent(role="Senior Coder", goal="Design, code proposals, and refactoring", backstory="Experienced engineer", llm=active_llm, verbose=True, tools=agent_tools)
+    appr = Agent(role="Junior Analyst", goal="Organize evidence, review risks, and summarize findings", backstory="Fast summarization specialist", llm=active_llm, verbose=True)
 
-    conversation_context = f'''이전 대화 내용:\n---\n{history}\n---\n''' if history else ""
+    conversation_context = f'''Previous conversation:\n---\n{history}\n---\n''' if history else ""
 
     tasks = []
     agents = []
 
     if mode == 'chat':
         tasks = [Task(
-            description=f"""{conversation_context}다음 사용자 요청에 대해 직접적이고 친절하게 **한국어로만** 한 번 답변하세요.
-- 'Thought:' 같은 접두사나 영어 설명을 쓰지 말 것.
-- 최종 답변 문장만 출력하고 같은 답변을 반복하지 말 것.
+            description=f"""{conversation_context}Answer the following user request once, directly and politely, in **Korean only**.
+- Do not use prefixes like 'Thought:' or any English-only explanation.
+- Output only the final answer sentence and do not repeat yourself.
 
-[요청]
+[Request]
 {user_prompt}""",
             agent=master,
-            expected_output="한국어 최종 답변 한 문장만 출력 (Thought 등 영어 접두사 없이)."
+            expected_output="Output one final answer sentence in Korean only, without English prefixes such as Thought."
         )]
         agents = [master]
     elif mode == 'create':
@@ -176,21 +176,21 @@ def run_session(
         tasks = [Task(
             description=create_description,
             agent=senior,
-            expected_output="**한국어로 작성된** 파일 경로, 코드 블록, 그리고 실행 방법을 포함한 최종 답변."
+            expected_output="A final answer written in Korean that includes file paths, code blocks, and run instructions."
         )]
         agents = [senior]
     elif mode == 'modify':
         tasks = [Task(
-            description=f"{conversation_context}[요청] 다음 파일을 수정하라: {targets}. 요구사항: '{user_prompt}'. **반드시 한국어로** 원본과의 차이점(diff)을 포함하여 수정된 코드를 제안하라.",
+            description=f"{conversation_context}[Request] Modify the following files: {targets}. Requirement: '{user_prompt}'. **You must answer in Korean** and include a diff against the original code.",
             agent=senior,
-            expected_output="**한국어로 작성된** 수정된 코드와 변경 사항에 대한 상세한 diff."
+            expected_output="Modified code and a detailed diff of the changes, written in Korean."
         )]
         agents = [senior]
     elif mode == 'delete':
         tasks = [Task(
-            description=f"{conversation_context}[요청] 다음 대상을 삭제해달라: {targets}. **실제로 삭제하지 말고**, **반드시 한국어로** 안전한 삭제 계획(백업 방법 포함)을 3단계로 제안하라.",
+            description=f"{conversation_context}[Request] The following targets were requested for deletion: {targets}. **Do not delete them for real.** Instead, propose a 3-step safe deletion plan, including backup steps, and **write it in Korean**.",
             agent=master,
-            expected_output="**한국어로 작성된** 안전한 삭제 계획 3단계."
+            expected_output="A 3-step safe deletion plan written in Korean."
         )]
         agents = [master]
     else: # Fallback to default chat mode
@@ -215,16 +215,16 @@ def run_session(
     clean_json_log_path = os.path.abspath(logger.j)
     clean_txt_log_path = os.path.abspath(logger.t)
     print("\n=== FINAL RESULT ===\n", result)
-    print(f"\n로그 파일:\n - {clean_json_log_path}\n - {clean_txt_log_path}")
+    print(f"\nLog files:\n - {clean_json_log_path}\n - {clean_txt_log_path}")
     logger._j({"event": "run_session_return", "sid": sid, "jsonl": clean_json_log_path, "txt": clean_txt_log_path})
     logger._t(f"[RUN_SESSION_RETURN] sid={sid} jsonl={clean_json_log_path} txt={clean_txt_log_path}")
     return result
 
 if __name__ == "__main__":
     while True:
-        prompt = input("\n질문이나 요청 입력 (종료하려면 'exit'): ").strip()
+        prompt = input("\nEnter a question or request ('exit' to quit): ").strip()
         if prompt.lower() in ("exit", "quit"):
-            print("종료합니다.")
+            print("Exiting.")
             break
         if prompt:
             run_session(prompt, state="MEETING", history="", mode="chat")

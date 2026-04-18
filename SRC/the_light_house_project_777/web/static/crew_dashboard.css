@@ -246,6 +246,20 @@
     gap: 8px;
 }
 
+.task-queue-empty {
+    margin: 0 0 8px;
+    border: 1px dashed #3f4550;
+    border-radius: 8px;
+    background: #1c2127;
+    color: #8f9aa6;
+    padding: 10px 12px;
+    font-size: 12px;
+}
+
+.task-queue-empty.is-hidden {
+    display: none;
+}
+
 .task-queue-item {
     display: grid;
     grid-template-columns: 16px 1fr auto;
@@ -257,9 +271,53 @@
     background: #1f2328;
 }
 
+.task-queue-item.is-running {
+    border-color: #8a6a22;
+    background: linear-gradient(180deg, rgba(52, 42, 18, 0.96), rgba(31, 35, 40, 0.96));
+}
+
+.task-queue-item.is-completed {
+    border-color: #2f6b46;
+}
+
+.task-queue-item.is-waiting {
+    border-style: dashed;
+    opacity: 0.92;
+}
+
 .task-name {
     font-size: 13px;
     color: #d7dde5;
+}
+
+.task-main {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.task-module-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 24px;
+    height: 18px;
+    margin-right: 8px;
+    border-radius: 999px;
+    border: 1px solid #4a5f75;
+    background: #1b2a38;
+    color: #9ecbff;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    vertical-align: middle;
+}
+
+.task-description {
+    font-size: 11px;
+    color: #8f9aa6;
+    margin-top: 2px;
 }
 
 .task-state-label {
@@ -267,6 +325,18 @@
     text-transform: uppercase;
     letter-spacing: 0.05em;
     color: #9aa3ad;
+}
+
+.task-state-label.is-running {
+    color: #f0c66a;
+}
+
+.task-state-label.is-completed {
+    color: #78dc9f;
+}
+
+.task-state-label.is-waiting {
+    color: #9fb3c7;
 }
 
 .task-indicator {
@@ -598,14 +668,24 @@
     gap: 10px;
     min-height: 0;
     overflow-y: auto;
-    padding-right: 2px;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
+    padding-right: 6px;
+    scrollbar-width: thin;
+    scrollbar-color: #506072 #171d23;
 }
 
 .selected-module-config-content::-webkit-scrollbar {
-    width: 0;
-    height: 0;
+    width: 8px;
+    height: 8px;
+}
+
+.selected-module-config-content::-webkit-scrollbar-thumb {
+    background: #506072;
+    border-radius: 999px;
+}
+
+.selected-module-config-content::-webkit-scrollbar-track {
+    background: #171d23;
+    border-radius: 999px;
 }
 
 .module-config-meta {

@@ -206,55 +206,10 @@
         <section class="crew-card task-queue" id="task-queue">
           <div class="crew-card-header">
             <h2 class="crew-section-title">Task Queue</h2>
-            <span class="queue-summary">8 Tasks</span>
+            <span class="queue-summary" id="task-queue-summary">No Active Tasks</span>
           </div>
-          <ul class="task-queue-list" id="task-queue-list">
-            <li class="task-queue-item completed">
-              <span class="task-indicator completed-indicator"></span>
-              <span class="task-name">Connect Facebook Page</span>
-              <span class="task-state-label">completed</span>
-            </li>
-            <li class="task-queue-item running">
-              <span class="task-indicator running-indicator"></span>
-              <span class="task-name">Collect News</span>
-              <span class="task-state-label status-running">running</span>
-            </li>
-            <li class="task-queue-item pending">
-              <span class="task-indicator pending-indicator"></span>
-              <span class="task-name">Filter Relevant Articles</span>
-              <span class="task-state-label">pending</span>
-            </li>
-            <li class="task-queue-item pending">
-              <span class="task-indicator pending-indicator"></span>
-              <span class="task-name">Summarize Article</span>
-              <span class="task-state-label">pending</span>
-            </li>
-            <li class="task-queue-item pending">
-              <span class="task-indicator pending-indicator"></span>
-              <span class="task-name">Generate Candidate Facebook Post</span>
-              <span class="task-state-label">pending</span>
-            </li>
-            <li class="task-queue-item pending">
-              <span class="task-indicator pending-indicator"></span>
-              <span class="task-name">Multi-Agent Review</span>
-              <span class="task-state-label">pending</span>
-            </li>
-            <li class="task-queue-item pending">
-              <span class="task-indicator pending-indicator"></span>
-              <span class="task-name">Review Publish Card</span>
-              <span class="task-state-label">pending</span>
-            </li>
-            <li class="task-queue-item pending">
-              <span class="task-indicator pending-indicator"></span>
-              <span class="task-name">Manual Approve</span>
-              <span class="task-state-label">pending</span>
-            </li>
-            <li class="task-queue-item pending">
-              <span class="task-indicator pending-indicator"></span>
-              <span class="task-name">Publish to Facebook</span>
-              <span class="task-state-label">pending</span>
-            </li>
-          </ul>
+          <p class="task-queue-empty" id="task-queue-empty">Select a module to see the current execution flow.</p>
+          <ul class="task-queue-list" id="task-queue-list"></ul>
         </section>
 
         <section class="crew-card global-log" id="global-log">

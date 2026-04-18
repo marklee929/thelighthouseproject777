@@ -24,6 +24,9 @@
     commandInput: document.getElementById("crew-command-input"),
     commandResponse: document.getElementById("crew-command-response"),
     activityLines: document.getElementById("activity-lines"),
+    taskQueueList: document.getElementById("task-queue-list"),
+    taskQueueSummary: document.getElementById("task-queue-summary"),
+    taskQueueEmpty: document.getElementById("task-queue-empty"),
     moduleConfigContent: document.getElementById("selected-module-config-content"),
     publishList: document.getElementById("publish-review-list"),
     publishCount: document.getElementById("publish-review-count"),
@@ -421,6 +424,260 @@
     });
   }
 
+  function taskIndicatorClass(status) {
+    if (status === "running") return "running-indicator";
+    if (status === "completed") return "completed-indicator";
+    return "pending-indicator";
+  }
+
+  function taskCardClass(status) {
+    if (status === "running") return "task-queue-item is-running";
+    if (status === "completed") return "task-queue-item is-completed";
+    return "task-queue-item is-waiting";
+  }
+
+  function taskLabelClass(status) {
+    if (status === "running") return "task-state-label is-running";
+    if (status === "completed") return "task-state-label is-completed";
+    return "task-state-label is-waiting";
+  }
+
+  function buildNewsCollectorTasks() {
+    const newsCollector = appState.newsCollector || {};
+    const feeds = Array.isArray(newsCollector.feeds) ? newsCollector.feeds : [];
+    const candidates = Array.isArray(newsCollector.candidates) ? newsCollector.candidates : [];
+    const connectedCount = Number(newsCollector.connectedCount || 0);
+    const scoredCount = candidates.filter((item) => item && item.final_score !== null && item.final_score !== undefined).length;
+    const collecting = Boolean(newsCollector.collecting);
+    const loadingFeeds = Boolean(newsCollector.loadingFeeds);
+    const loadingCandidates = Boolean(newsCollector.loading);
+    const tasks = [];
+
+    tasks.push({
+      label: "Load Christian RSS Registry",
+      status: loadingFeeds ? "running" : feeds.length ? "completed" : "waiting",
+      description: loadingFeeds
+        ? "Seeding the christian_news_collection registry into PostgreSQL."
+        : feeds.length
+        ? `${feeds.length} curated RSS feeds are registered.`
+        : "Registry seed prepares the initial Christian RSS list.",
+    });
+
+    if (feeds.length || loadingFeeds) {
+      tasks.push({
+        label: "Connect RSS Feeds",
+        status: connectedCount > 0 ? "completed" : "waiting",
+        description:
+          connectedCount > 0
+            ? `${connectedCount} feed(s) connected and ready for latest-news collection.`
+            : "Select a feed and connect it before collection starts.",
+      });
+    }
+
+    if (collecting || connectedCount > 0 || candidates.length > 0) {
+      tasks.push({
+        label: "Collect Latest Christian News",
+        status: collecting ? "running" : candidates.length > 0 ? "completed" : "waiting",
+        description: collecting
+          ? "Fetching only the last-hour RSS articles and storing raw content and metadata."
+          : candidates.length > 0
+          ? `${candidates.length} article candidate(s) survived the fresh-review gate.`
+          : "Start collection to fetch only the last-hour RSS stories.",
+      });
+      tasks.push({
+        label: "Score PLD-Safe Candidates",
+        status: collecting || loadingCandidates ? "running" : scoredCount > 0 ? "completed" : "waiting",
+        description:
+          collecting || loadingCandidates
+            ? "Applying PLD-fit, reaction, operational safety, and freshness ranking."
+            : scoredCount > 0
+            ? `${scoredCount} candidate(s) already have article scores.`
+            : "Scoring begins immediately after collection and keeps one article per 10-minute bucket.",
+      });
+    }
+
+    if (candidates.length > 0 || loadingCandidates) {
+      tasks.push({
+        label: "Operator Review Cards",
+        status: loadingCandidates ? "running" : candidates.length > 0 ? "running" : "waiting",
+        description:
+          candidates.length > 0
+            ? "Approve, modify, reject, or drop cards before they move to Social."
+            : "Waiting for reviewable article cards.",
+      });
+    }
+
+    return tasks.filter((task, index) => task.status !== "waiting" || index < 3 || collecting || candidates.length > 0);
+  }
+
+  function buildSocialTasks() {
+    const state = String(appState.generationState || "idle");
+    const hasDrafts = getActiveDraftCards().length > 0;
+    const hasCurrentPost = Boolean(appState.currentPostId);
+    const connected = Boolean(appState.xAuth && appState.xAuth.connected);
+    const tasks = [];
+
+    tasks.push({
+      label: "Connect Facebook Page",
+      status: connected ? "completed" : "waiting",
+      description: connected ? "Publishing connector is ready." : "Facebook runtime auth must be valid first.",
+    });
+
+    if (appState.generationEnabled || state !== "idle" || hasDrafts) {
+      tasks.push({
+        label: "Collect News",
+        status:
+          state === "collecting"
+            ? "running"
+            : hasDrafts || ["generating", "reviewing", "telegram_pending", "approved_for_publish", "published"].includes(state)
+            ? "completed"
+            : "waiting",
+        description:
+          state === "collecting"
+            ? "Collecting source articles for the current Social cycle."
+            : "Collection is complete for the current draft cycle.",
+      });
+      tasks.push({
+        label: "Generate Candidate Facebook Post",
+        status:
+          state === "generating"
+            ? "running"
+            : hasDrafts || ["reviewing", "telegram_pending", "approved_for_publish", "published"].includes(state)
+            ? "completed"
+            : "waiting",
+        description:
+          state === "generating"
+            ? "Generating draft copy and candidate assets."
+            : hasDrafts
+            ? "Draft generation completed for the current cycle."
+            : "Draft generation follows article collection.",
+      });
+      tasks.push({
+        label: "Telegram Approval Review",
+        status: ["reviewing", "telegram_pending", "waiting_approval", "publishing_review"].includes(state)
+          ? "running"
+          : ["approved_for_publish", "published"].includes(state)
+          ? "completed"
+          : "waiting",
+        description:
+          ["reviewing", "telegram_pending", "waiting_approval", "publishing_review"].includes(state)
+            ? "Waiting for operator review before publish."
+            : "Telegram approval is the manual gate before publish.",
+      });
+      tasks.push({
+        label: "Publish to Facebook",
+        status: state === "published" ? "completed" : state === "approved_for_publish" ? "running" : "waiting",
+        description:
+          state === "published" ? "Latest approved draft is already published." : "Publishing starts after approval.",
+      });
+    } else if (hasCurrentPost) {
+      tasks.push({
+        label: "Monitor Current Post",
+        status: "running",
+        description: "Monitoring the current post before the next generation window.",
+      });
+    }
+
+    return tasks.filter((task, index) => task.status !== "waiting" || index === 0);
+  }
+
+  function buildGenericModuleTasks(moduleName) {
+    return [
+      {
+        label: `${moduleName} Execution Flow`,
+        status: appState.modules[moduleName] && appState.modules[moduleName].active ? "running" : "waiting",
+        description:
+          appState.modules[moduleName] && appState.modules[moduleName].active
+            ? "This module is selected, but its live execution queue is not modeled yet."
+            : "Select and activate this module when its execution flow is ready.",
+      },
+    ];
+  }
+
+  function collectTaskGroups() {
+    const groups = [];
+    const newsCollector = appState.newsCollector || {};
+    const showNewsCollector =
+      Boolean(newsCollector.loadingFeeds) ||
+      Boolean(newsCollector.loading) ||
+      Boolean(newsCollector.collecting) ||
+      (Array.isArray(newsCollector.feeds) && newsCollector.feeds.length > 0) ||
+      (Array.isArray(newsCollector.candidates) && newsCollector.candidates.length > 0) ||
+      Boolean(appState.modules["News Collector"] && appState.modules["News Collector"].active) ||
+      appState.selectedModule === "News Collector";
+    if (showNewsCollector) {
+      groups.push({
+        moduleName: "News Collector",
+        moduleCode: "NC",
+        tasks: buildNewsCollectorTasks(),
+      });
+    }
+
+    const socialHasWork =
+      appState.generationEnabled ||
+      String(appState.generationState || "idle") !== "idle" ||
+      getActiveDraftCards().length > 0 ||
+      Boolean(appState.currentPostId) ||
+      Boolean(appState.modules.Social && appState.modules.Social.active) ||
+      appState.selectedModule === "Social";
+    if (socialHasWork) {
+      groups.push({
+        moduleName: "Social",
+        moduleCode: "SO",
+        tasks: buildSocialTasks(),
+      });
+    }
+
+    if (!groups.length && appState.selectedModule) {
+      groups.push({
+        moduleName: appState.selectedModule,
+        moduleCode: String(appState.selectedModule || "").slice(0, 2).toUpperCase(),
+        tasks: buildGenericModuleTasks(appState.selectedModule),
+      });
+    }
+
+    return groups
+      .map((group) => ({
+        ...group,
+        tasks: (group.tasks || []).map((task) => ({ ...task, moduleName: group.moduleName, moduleCode: group.moduleCode })),
+      }))
+      .filter((group) => group.tasks.length > 0);
+  }
+
+  function renderTaskQueue() {
+    if (!dom.taskQueueList || !dom.taskQueueSummary || !dom.taskQueueEmpty) return;
+    const groups = collectTaskGroups();
+    const visibleTasks = groups.flatMap((group) => group.tasks || []);
+    if (!visibleTasks.length) {
+      dom.taskQueueList.innerHTML = "";
+      dom.taskQueueSummary.textContent = "No Active Tasks";
+      dom.taskQueueEmpty.textContent = "Select or run a module to see the live execution flow.";
+      dom.taskQueueEmpty.classList.remove("is-hidden");
+      return;
+    }
+    const runningCount = visibleTasks.filter((task) => task.status === "running").length;
+    const completedCount = visibleTasks.filter((task) => task.status === "completed").length;
+    const waitingCount = visibleTasks.filter((task) => task.status === "waiting").length;
+    const moduleSummary = groups.map((group) => group.moduleName).join(" + ");
+    dom.taskQueueSummary.textContent = `${moduleSummary} | ${visibleTasks.length} Tasks | ${runningCount} Running${
+      completedCount ? ` | ${completedCount} Ready` : ""
+    }${waitingCount ? ` | ${waitingCount} Waiting` : ""}`;
+    dom.taskQueueEmpty.classList.toggle("is-hidden", visibleTasks.length > 0);
+
+    dom.taskQueueList.innerHTML = visibleTasks
+      .map(
+        (task) => `<li class="${taskCardClass(task.status)}">
+  <span class="task-indicator ${taskIndicatorClass(task.status)}"></span>
+  <span class="task-main">
+    <span class="task-name"><span class="task-module-chip">${esc(task.moduleCode || "")}</span>${esc(task.label)}</span>
+    <span class="task-description">${esc(task.description || "")}</span>
+  </span>
+  <span class="${taskLabelClass(task.status)}">${esc(task.status)}</span>
+</li>`
+      )
+      .join("");
+  }
+
   function getModuleStatusClass(status) {
     if (status === "running") return "module-status-running";
     if (status === "complete") return "module-status-complete";
@@ -467,6 +724,7 @@
     appendLog("system", `[SYSTEM] Module ${moduleName} selected`);
     renderModuleConfig();
     renderModules();
+    renderTaskQueue();
     persistUiButtonState();
     if (newsCollectorController) {
       newsCollectorController.handleModuleSelected(moduleName);
@@ -480,6 +738,7 @@
     if (forceActive || status === "running") moduleState.active = true;
     if (status === "idle" && !forceActive && !moduleState.active) moduleState.active = false;
     renderModules();
+    renderTaskQueue();
   }
 
   function toggleModuleActive(moduleName) {
@@ -492,6 +751,7 @@
     moduleState.active = !moduleState.active;
     appendLog("system", `[SYSTEM] Module ${moduleName} ${moduleState.active ? "active" : "inactive"}`);
     renderModules();
+    renderTaskQueue();
     persistUiButtonState();
   }
 
@@ -523,6 +783,7 @@
     }
 
     renderModuleConfig();
+    renderTaskQueue();
   }
 
   function normalizePublishDraft(row) {
@@ -2355,6 +2616,7 @@
 
   function rerender() {
     renderModules();
+    renderTaskQueue();
     renderFilterButtons();
     applyLogFilter();
     renderModuleConfig();

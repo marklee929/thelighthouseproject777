@@ -6,8 +6,8 @@ CONFIG_DIR = os.path.join(os.path.dirname(__file__), "..", "config")
 
 def load_configs() -> Tuple[Dict[str, Any], Dict[str, Any]]:
     """
-    config/app.yaml과 config/permissions.yaml 파일을 로드합니다.
-    파일이 없거나 비어있으면 빈 딕셔너리를 반환합니다.
+    Load config/app.yaml and config/permissions.yaml.
+    Return empty dictionaries when the files are missing or empty.
     """
     app_cfg_path = os.path.join(CONFIG_DIR, "app.yaml")
     perm_cfg_path = os.path.join(CONFIG_DIR, "permissions.yaml")
@@ -26,7 +26,7 @@ def load_configs() -> Tuple[Dict[str, Any], Dict[str, Any]]:
 
 def merge_permissions(app_cfg: Dict[str, Any], perm_cfg: Dict[str, Any]) -> Dict[str, Any]:
     """
-    애플리케이션 설정의 기본 권한과 외부 권한 설정 파일의 내용을 병합합니다.
+    Merge the default application permissions with the external permissions file.
     """
     perms = app_cfg.get("permissions", {}).copy()
     if isinstance(perm_cfg, dict):

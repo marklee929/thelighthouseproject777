@@ -28,6 +28,10 @@
     publishList: document.getElementById("publish-review-list"),
     publishCount: document.getElementById("publish-review-count"),
     publishEmpty: document.getElementById("publish-review-empty"),
+    newsCollectorScreen: document.getElementById("news-collector-screen"),
+    newsCollectorList: document.getElementById("news-collector-list"),
+    newsCollectorCount: document.getElementById("news-collector-count"),
+    newsCollectorEmpty: document.getElementById("news-collector-empty"),
     modal: document.getElementById("draft-preview-modal"),
     modalCategory: document.getElementById("draft-preview-category-input"),
     modalSourceLink: document.getElementById("draft-preview-source-link-input"),
@@ -160,6 +164,22 @@
       currentCycleId: null,
     },
   };
+  const newsCollectorController =
+    window.CrewNewsCollector && typeof window.CrewNewsCollector.createController === "function"
+      ? window.CrewNewsCollector.createController({
+          root,
+          appState,
+          dom,
+          helpers: {
+            apiJson,
+            appendLog,
+            appendApiError,
+            esc,
+            setActivity,
+            rerender,
+          },
+        })
+      : null;
 
   function captureUiButtonState() {
     const moduleFlags = {};
@@ -448,6 +468,9 @@
     renderModuleConfig();
     renderModules();
     persistUiButtonState();
+    if (newsCollectorController) {
+      newsCollectorController.handleModuleSelected(moduleName);
+    }
   }
 
   function setModuleStatus(moduleName, status, forceActive) {
@@ -777,6 +800,11 @@
     if (!appState.selectedModule) {
       dom.moduleConfigContent.innerHTML =
         '<div class="module-config-empty">Select a module from Module Control Panel.</div>';
+      return;
+    }
+
+    if (appState.selectedModule === "News Collector" && newsCollectorController) {
+      newsCollectorController.renderModuleConfig();
       return;
     }
 
@@ -1643,6 +1671,7 @@
   function handleDynamicClick(event) {
     const target = event.target;
     if (!(target instanceof HTMLElement)) return;
+    if (newsCollectorController && newsCollectorController.handleDynamicClick(event)) return;
 
     const publishToggle = target.dataset.publishToggle;
     if (publishToggle === "card") {
@@ -1783,6 +1812,7 @@
   function handleDynamicInput(event) {
     const target = event.target;
     if (!(target instanceof HTMLElement)) return;
+    if (newsCollectorController && newsCollectorController.handleDynamicInput(event)) return;
     if (target.id === "social-topic-input" && target instanceof HTMLInputElement) {
       appState.socialForm.topic = target.value;
       return;
@@ -2329,6 +2359,7 @@
     applyLogFilter();
     renderModuleConfig();
     renderPublishCards();
+    if (newsCollectorController) newsCollectorController.renderScreen();
   }
 
   dom.moduleButtons.forEach((button) => {
@@ -2445,6 +2476,9 @@
   window.cancelPublish = cancelPublish;
 
   window.setInterval(() => {
+    if (newsCollectorController && appState.selectedModule === "News Collector") {
+      newsCollectorController.refreshIfSelected();
+    }
     if (appState.selectedModule === "Content") {
       refreshContentQueue(true);
     }
@@ -2466,6 +2500,7 @@
 
   loadBootstrap()
     .then(() => maybeRestoreUiButtonState())
+    .then(() => (newsCollectorController ? newsCollectorController.afterBootstrap() : null))
     .then(() => refreshPublishQueue(true))
     .then(() => refreshContentQueue(true))
     .then(() => refreshPendingApprovals(true))

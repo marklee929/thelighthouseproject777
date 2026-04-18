@@ -126,6 +126,14 @@ except Exception as exc:
 from pyqle_logger import pyqle_log, configure_pyqle_logger
 import crew_ai
 from dev_reloader import DevAutoReloader
+from repositories import (
+    PostgresArticleRepository,
+    PostgresArticleReviewRepository,
+    PostgresConnectionFactory,
+    PostgresGeneratedContentRepository,
+)
+from services.news_collector import NewsCollectorReviewService
+from services.review import FacebookCandidateQueueService
 from social_automation import SocialAutomationService
 boot_trace("imports complete")
 boot_trace("imported main.py")
@@ -194,6 +202,20 @@ start_sink()
 app = Flask(__name__, template_folder='web', static_folder='web/static')
 boot_trace("flask app created")
 SOCIAL_AUTOMATION = SocialAutomationService(str(PROJECT_ROOT))
+POSTGRES_CONNECTION_FACTORY = PostgresConnectionFactory.from_env()
+POSTGRES_ARTICLE_REPOSITORY = PostgresArticleRepository(POSTGRES_CONNECTION_FACTORY)
+POSTGRES_ARTICLE_REVIEW_REPOSITORY = PostgresArticleReviewRepository(POSTGRES_CONNECTION_FACTORY)
+POSTGRES_GENERATED_CONTENT_REPOSITORY = PostgresGeneratedContentRepository(POSTGRES_CONNECTION_FACTORY)
+FACEBOOK_CANDIDATE_QUEUE_SERVICE = FacebookCandidateQueueService(
+    article_repository=POSTGRES_ARTICLE_REPOSITORY,
+    article_review_repository=POSTGRES_ARTICLE_REVIEW_REPOSITORY,
+    generated_content_repository=POSTGRES_GENERATED_CONTENT_REPOSITORY,
+)
+NEWS_COLLECTOR_REVIEW_SERVICE = NewsCollectorReviewService(
+    article_repository=POSTGRES_ARTICLE_REPOSITORY,
+    article_review_repository=POSTGRES_ARTICLE_REVIEW_REPOSITORY,
+    facebook_candidate_queue_service=FACEBOOK_CANDIDATE_QUEUE_SERVICE,
+)
 
 
 def _resolve_ui_mode(argv: Optional[List[str]] = None) -> str:
@@ -1423,6 +1445,59 @@ def crew_social_facebook_reissue():
     payload = request.get_json(force=True, silent=True) or {}
     try:
         result = SOCIAL_AUTOMATION.reissue_facebook_page_token(payload)
+        status_code = 200 if result.get("ok") else 400
+        return jsonify(result), status_code
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
+
+@app.route('/api/crew/news-collector/candidates', methods=['GET'])
+def crew_news_collector_candidates():
+    limit = request.args.get('limit', default=24, type=int)
+    safe_limit = max(1, min(int(limit or 24), 100))
+    try:
+        items = NEWS_COLLECTOR_REVIEW_SERVICE.list_candidates(limit=safe_limit)
+        return jsonify({"ok": True, "items": items, "count": len(items)}), 200
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
+
+@app.route('/api/crew/news-collector/approve', methods=['POST'])
+def crew_news_collector_approve():
+    payload = request.get_json(force=True, silent=True) or {}
+    article_id = str(payload.get("article_id", "") or "").strip()
+    if not article_id:
+        return jsonify({"ok": False, "error": "article_id_required"}), 400
+    try:
+        result = NEWS_COLLECTOR_REVIEW_SERVICE.approve_candidate(article_id, payload)
+        status_code = 200 if result.get("ok") else 400
+        return jsonify(result), status_code
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
+
+@app.route('/api/crew/news-collector/modify', methods=['POST'])
+def crew_news_collector_modify():
+    payload = request.get_json(force=True, silent=True) or {}
+    article_id = str(payload.get("article_id", "") or "").strip()
+    if not article_id:
+        return jsonify({"ok": False, "error": "article_id_required"}), 400
+    try:
+        result = NEWS_COLLECTOR_REVIEW_SERVICE.modify_candidate(article_id, payload)
+        status_code = 200 if result.get("ok") else 400
+        return jsonify(result), status_code
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
+
+@app.route('/api/crew/news-collector/reject', methods=['POST'])
+def crew_news_collector_reject():
+    payload = request.get_json(force=True, silent=True) or {}
+    article_id = str(payload.get("article_id", "") or "").strip()
+    if not article_id:
+        return jsonify({"ok": False, "error": "article_id_required"}), 400
+    try:
+        result = NEWS_COLLECTOR_REVIEW_SERVICE.reject_candidate(article_id, payload)
         status_code = 200 if result.get("ok") else 400
         return jsonify(result), status_code
     except Exception as exc:

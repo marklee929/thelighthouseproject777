@@ -161,6 +161,91 @@ class PostgresArticleRepository:
                 rows = cur.fetchall() or []
         return [dict(row) for row in rows]
 
+    def list_news_collector_candidates(self, limit: int) -> list[dict[str, Any]]:
+        query = """
+            WITH latest_reviews AS (
+                SELECT DISTINCT ON (ar.article_id)
+                    ar.article_id,
+                    ar.article_review_id,
+                    ar.decision,
+                    ar.reviewed_at,
+                    ar.review_summary,
+                    ar.suggested_angle,
+                    ar.suggested_question,
+                    ar.operator_note,
+                    ar.review_note
+                FROM core.article_reviews AS ar
+                ORDER BY ar.article_id, ar.reviewed_at DESC, ar.created_at DESC
+            ),
+            published_articles AS (
+                SELECT DISTINCT gc.article_id
+                FROM content.generated_contents AS gc
+                JOIN system.publish_logs AS pl
+                  ON pl.generated_content_id = gc.generated_content_id
+                WHERE pl.publish_status = 'published'
+            ),
+            candidate_articles AS (
+                SELECT DISTINCT article_id
+                FROM content.generated_contents
+                WHERE content_type = 'facebook_post_candidate'
+            )
+            SELECT
+                a.article_id,
+                a.title,
+                a.summary_raw,
+                a.article_content_raw,
+                a.article_url,
+                a.canonical_url,
+                a.published_at,
+                a.collected_at,
+                a.review_status,
+                a.selection_status,
+                a.reaction_score,
+                a.pld_fit_score,
+                a.operational_score,
+                a.final_score,
+                a.dominant_pld_stage,
+                a.selection_summary,
+                a.article_metadata,
+                s.source_name,
+                s.source_code,
+                f.feed_name,
+                f.feed_code,
+                lr.article_review_id AS latest_review_id,
+                lr.decision AS latest_review_decision,
+                lr.review_summary,
+                lr.suggested_angle,
+                lr.suggested_question,
+                lr.operator_note,
+                lr.review_note,
+                lr.reviewed_at AS latest_reviewed_at
+            FROM core.articles AS a
+            JOIN core.sources AS s
+              ON s.source_id = a.source_id
+            JOIN core.rss_feeds AS f
+              ON f.rss_feed_id = a.rss_feed_id
+            LEFT JOIN latest_reviews AS lr
+              ON lr.article_id = a.article_id
+            LEFT JOIN candidate_articles AS ca
+              ON ca.article_id = a.article_id
+            LEFT JOIN published_articles AS pa
+              ON pa.article_id = a.article_id
+            WHERE a.selection_status NOT IN ('hard_rejected', 'review_rejected', 'facebook_candidate_created')
+              AND a.review_status IN ('pending', 'hold')
+              AND pa.article_id IS NULL
+              AND ca.article_id IS NULL
+            ORDER BY
+                a.final_score DESC NULLS LAST,
+                a.published_at DESC NULLS LAST,
+                a.collected_at DESC
+            LIMIT %s
+        """
+        with self.connection_factory.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(query, (limit,))
+                rows = cur.fetchall() or []
+        return [dict(row) for row in rows]
+
     def get_by_dedupe_hash(self, dedupe_hash: str) -> Optional[dict[str, Any]]:
         query = """
             SELECT article_id, dedupe_hash, review_status, recommendation_score
@@ -543,6 +628,10 @@ class PostgresArticleReviewRepository:
                 review_note,
                 decision_payload,
                 review_context,
+                review_summary,
+                suggested_angle,
+                suggested_question,
+                operator_note,
                 dispatch_id,
                 telegram_chat_id,
                 telegram_message_id,
@@ -550,7 +639,9 @@ class PostgresArticleReviewRepository:
                 created_at,
                 updated_at
             )
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s::jsonb, %s::jsonb, %s, %s, %s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            VALUES (
+                %s, %s, %s, %s, %s, %s, %s, %s::jsonb, %s::jsonb, %s, %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+            )
             RETURNING article_review_id
         """
         params = (
@@ -563,6 +654,10 @@ class PostgresArticleReviewRepository:
             review.get("review_note"),
             _json_payload(review.get("decision_payload")),
             _json_payload(review.get("review_context")),
+            review.get("review_summary"),
+            review.get("suggested_angle"),
+            review.get("suggested_question"),
+            review.get("operator_note"),
             review.get("dispatch_id"),
             review.get("telegram_chat_id"),
             review.get("telegram_message_id"),
@@ -573,6 +668,34 @@ class PostgresArticleReviewRepository:
                 cur.execute(query, params)
                 row = cur.fetchone()
         return str(row["article_review_id"])
+
+    def find_latest_review(self, article_id: str) -> dict[str, Any] | None:
+        query = """
+            SELECT
+                article_review_id,
+                article_id,
+                decision,
+                reviewer_id,
+                reviewer_code,
+                reviewer_display_name,
+                review_note,
+                review_summary,
+                suggested_angle,
+                suggested_question,
+                operator_note,
+                decision_payload,
+                review_context,
+                reviewed_at
+            FROM core.article_reviews
+            WHERE article_id = %s
+            ORDER BY reviewed_at DESC, created_at DESC
+            LIMIT 1
+        """
+        with self.connection_factory.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(query, (article_id,))
+                row = cur.fetchone()
+        return dict(row) if row else None
 
     def has_confirm_review(self, article_id: str) -> bool:
         query = """

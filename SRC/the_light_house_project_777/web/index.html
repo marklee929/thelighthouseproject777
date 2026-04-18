@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="/static/style.css?v=3">
     {% if mode != 'pyqle' %}
     <link rel="stylesheet" href="/static/crew_dashboard.css?v=3">
+    <link rel="stylesheet" href="/static/news_collector.css?v=1">
     {% endif %}
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css">
 </head>
@@ -125,6 +126,14 @@
         <section class="crew-card crew-modules-panel" id="crew-modules-panel">
           <h2 class="crew-section-title">Module Control Panel</h2>
           <div class="crew-modules" id="crew-modules">
+            <button class="crew-module-item is-inactive" data-module="News Collector" aria-pressed="false">
+              <span class="module-icon">NC</span>
+              <span class="module-meta">
+                <span class="module-name">News Collector</span>
+                <span class="module-state-text module-status-idle">idle</span>
+              </span>
+              <span class="crew-module-led led-idle" data-led></span>
+            </button>
             <button class="crew-module-item is-inactive" data-module="Social" aria-pressed="false">
               <span class="module-icon">SO</span>
               <span class="module-meta">
@@ -179,6 +188,21 @@
 
       <!-- Center panel: queue, global logs, and live command input. -->
       <main class="crew-main" id="crew-main">
+        <section class="crew-card news-collector-screen" id="news-collector-screen">
+          <div class="crew-card-header">
+            <div>
+              <h2 class="crew-section-title">News Collector Review</h2>
+              <p class="news-collector-subtitle">Review collected article candidates before they enter the Social generation flow.</p>
+            </div>
+            <div class="news-collector-toolbar">
+              <span class="queue-summary" id="news-collector-count">0 Candidates</span>
+              <button type="button" class="crew-btn ghost" id="news-collector-refresh-btn" data-news-collector-action="refresh">Refresh</button>
+            </div>
+          </div>
+          <p class="news-collector-empty" id="news-collector-empty">No collected article candidates are ready for review.</p>
+          <div class="news-collector-list" id="news-collector-list"></div>
+        </section>
+
         <section class="crew-card task-queue" id="task-queue">
           <div class="crew-card-header">
             <h2 class="crew-section-title">Task Queue</h2>
@@ -372,7 +396,8 @@
       </div>
     </div>
     <script src="/static/crew_dashboard_ui_state.js?v=1"></script>
-    <script src="/static/crew_dashboard.js?v=22"></script>
+    <script src="/static/news_collector.js?v=1"></script>
+    <script src="/static/crew_dashboard.js?v=23"></script>
     {% endif %}
 </body>
 </html>

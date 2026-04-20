@@ -16,12 +16,13 @@ class HardRejectEvaluator:
         "must be stopped",
         "hate",
     }
-    INSIDER_ONLY_TERMS = {
-        "dispensational",
-        "pre-tribulation",
-        "propitiation",
-        "intercessory warfare",
-        "five-fold ministry",
+    SPAM_UNSAFE_TERMS = {
+        "casino",
+        "betting",
+        "porn",
+        "miracle cure",
+        "click here",
+        "buy now",
     }
 
     def evaluate(self, article: Dict[str, Any], analysis: Dict[str, Any]) -> Dict[str, Any]:
@@ -38,9 +39,11 @@ class HardRejectEvaluator:
             return {"hard_reject": True, "hard_reject_reason": "Source or feed is not in an active trusted state."}
         if any(token in text for token in self.CONFLICT_BAIT_TERMS):
             return {"hard_reject": True, "hard_reject_reason": "High policy-risk conflict bait detected in the article framing."}
-        if sum(1 for token in self.INSIDER_ONLY_TERMS if token in text) >= 2:
-            return {"hard_reject": True, "hard_reject_reason": "The article leans on insider-only religious language with weak broad-entry potential."}
-        pld_breakdown = dict(analysis.get("pld_breakdown") or {})
-        if max(float(pld_breakdown.get(key, 0.0)) for key in ("entry_fit", "hook_fit", "loop_fit", "trust_fit")) < 45:
-            return {"hard_reject": True, "hard_reject_reason": "The article cannot be cleanly reframed into curiosity-first or reflection-first content."}
+        if any(token in text for token in self.SPAM_UNSAFE_TERMS):
+            return {"hard_reject": True, "hard_reject_reason": "Spam-like or platform-unsafe content detected."}
+        operational_breakdown = dict(analysis.get("operational_breakdown") or {})
+        moderation_risk = float(operational_breakdown.get("moderation_platform_risk", 0.0))
+        brand_safety = float(operational_breakdown.get("brand_safety", 100.0))
+        if moderation_risk >= 90.0 or brand_safety <= 20.0:
+            return {"hard_reject": True, "hard_reject_reason": "Platform-risk or brand-safety risk is too high for phase-1 review."}
         return {"hard_reject": False, "hard_reject_reason": ""}

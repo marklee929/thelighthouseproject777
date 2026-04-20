@@ -1,4 +1,4 @@
-from .content_repositories import PostgresGeneratedContentRepository
+from .content_repositories import PostgresGeneratedContentRepository, PostgresReviewCardRepository
 from .core_repositories import (
     PostgresArticleRepository,
     PostgresArticleReviewRepository,
@@ -18,6 +18,7 @@ __all__ = [
     "PostgresArticleReviewRepository",
     "PostgresConnectionFactory",
     "PostgresGeneratedContentRepository",
+    "PostgresReviewCardRepository",
     "PostgresIngestionRunRepository",
     "PostgresReviewerRepository",
     "PostgresRssFeedRepository",

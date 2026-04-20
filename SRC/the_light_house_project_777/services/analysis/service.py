@@ -54,13 +54,21 @@ class ArticleAnalysisService:
             outputs.append({"article_id": article["article_id"], **analysis})
         return outputs
 
-    def analyze_article(self, article: Dict[str, Any]) -> Dict[str, Any]:
+    def analyze_article(
+        self,
+        article: Dict[str, Any],
+        *,
+        model_name: Optional[str] = None,
+        analysis_version: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        effective_model = str(model_name or self.model_name).strip() or self.model_name
+        effective_version = str(analysis_version or self.analysis_version).strip() or self.analysis_version
         prompt = self.prompt_builder.build_prompt(article)
         try:
             llm_response = run_local_model(
                 task_type="review_news",
                 prompt=prompt,
-                model=self.model_name,
+                model=effective_model,
                 ollama_base_url=self.ollama_base_url,
                 format="json",
                 timeout=60.0,
@@ -78,8 +86,8 @@ class ArticleAnalysisService:
             {
                 "hard_reject_reason": hard_reject["hard_reject_reason"],
                 "selection_status": selection_status,
-                "analysis_model": self.model_name,
-                "analysis_version": self.analysis_version,
+                "analysis_model": effective_model,
+                "analysis_version": effective_version,
                 "analyzed_at": _now_utc(),
                 "analysis_payload": {
                     "prompt": prompt,

@@ -85,6 +85,33 @@ class RssIngestionService:
             )
         return results
 
+    def prepare_feed_articles(
+        self,
+        feed_definition: Dict[str, Any],
+        *,
+        item_limit: Optional[int] = None,
+        recent_hours: Optional[int] = None,
+    ) -> Dict[str, Any]:
+        raw_items = self.feed_client.fetch(feed_definition)
+        raw_items = self._filter_recent_items(raw_items, recent_hours)
+        if item_limit is not None:
+            raw_items = raw_items[: max(0, int(item_limit))]
+
+        articles: List[Dict[str, Any]] = []
+        items_failed = 0
+        for raw_item in raw_items:
+            try:
+                article_fetch = self.article_client.fetch(str(raw_item.get("link", "")))
+                article_payload = self.normalizer.normalize(feed_definition, raw_item, article_fetch)
+                articles.append(article_payload)
+            except Exception:
+                items_failed += 1
+        return {
+            "items_fetched": len(raw_items),
+            "items_failed": items_failed,
+            "articles": articles,
+        }
+
     def _ingest_feed(
         self,
         *,
@@ -112,15 +139,15 @@ class RssIngestionService:
         items_failed = 0
         error_message = ""
         try:
-            raw_items = self.feed_client.fetch(feed_definition)
-            raw_items = self._filter_recent_items(raw_items, recent_hours)
-            if item_limit is not None:
-                raw_items = raw_items[: max(0, int(item_limit))]
-            items_fetched = len(raw_items)
-            for raw_item in raw_items:
+            prepared = self.prepare_feed_articles(
+                feed_definition,
+                item_limit=item_limit,
+                recent_hours=recent_hours,
+            )
+            items_fetched = int(prepared.get("items_fetched") or 0)
+            items_failed = int(prepared.get("items_failed") or 0)
+            for article_payload in prepared.get("articles", []):
                 try:
-                    article_fetch = self.article_client.fetch(str(raw_item.get("link", "")))
-                    article_payload = self.normalizer.normalize(feed_definition, raw_item, article_fetch)
                     existing = self.article_repository.get_by_dedupe_hash(str(article_payload.get("dedupe_hash", "")))
                     if existing:
                         self.article_repository.mark_duplicate_seen(str(existing["article_id"]), ingestion_run_id)

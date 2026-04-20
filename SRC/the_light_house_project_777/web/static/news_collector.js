@@ -2,7 +2,7 @@
 
 (function newsCollectorBootstrap(global) {
   const MODULE_NAME = "News Collector";
-  const DEFAULT_LIMIT = 24;
+  const DEFAULT_LIMIT = 5;
 
   function createDefaultState() {
     return {
@@ -11,8 +11,10 @@
       count: 0,
       connectedCount: 0,
       loading: false,
+      loadingPreviewCards: false,
       loadingFeeds: false,
       collecting: false,
+      previewCards: [],
       loadedOnce: false,
       feedsLoadedOnce: false,
       selectedArticleId: "",
@@ -162,6 +164,27 @@
       }
     }
 
+    async function loadPreviewCards(options) {
+      const opts = options || {};
+      const silent = Boolean(opts.silent);
+      const limit = Math.max(1, Math.min(Number(opts.limit || state.limit || DEFAULT_LIMIT), 20));
+      if (typeof apiJson !== "function") return;
+      state.loadingPreviewCards = true;
+      rerender();
+      try {
+        const response = await apiJson(`/api/crew/news-collector/preview-cards?limit=${limit}`);
+        state.previewCards = Array.isArray(response.items) ? response.items : [];
+        if (!silent) {
+          appendLog("system", `[SYSTEM] News Collector loaded ${state.previewCards.length} Telegram preview cards`);
+        }
+      } catch (error) {
+        if (!silent) appendApiError(error);
+      } finally {
+        state.loadingPreviewCards = false;
+        rerender();
+      }
+    }
+
     async function loadFeeds(options) {
       const opts = options || {};
       const silent = Boolean(opts.silent);
@@ -224,7 +247,7 @@
         if (response && response.queue_result && response.queue_result.generated_content_id) {
           appendLog("system", `[SYSTEM] Facebook candidate queued: ${response.queue_result.generated_content_id}`);
         }
-        await loadCandidates({ silent: true });
+        await Promise.all([loadCandidates({ silent: true }), loadPreviewCards({ silent: true })]);
         rerender();
       } catch (error) {
         appendApiError(error);
@@ -324,7 +347,7 @@
         if (response.analysis_error) {
           appendLog("system", `[SYSTEM] Analysis fallback used: ${response.analysis_error}`);
         }
-        await Promise.all([loadFeeds({ silent: true }), loadCandidates({ silent: true })]);
+        await Promise.all([loadFeeds({ silent: true }), loadCandidates({ silent: true }), loadPreviewCards({ silent: true })]);
         rerender();
       } catch (error) {
         appendApiError(error);
@@ -377,6 +400,41 @@
 </article>`;
     }
 
+    function renderPreviewCard(card) {
+      const verses = Array.isArray(card.verses) ? card.verses : [];
+      const verseMarkup = verses.length
+        ? `<ol class="news-collector-preview-verses">${verses
+            .map(
+              (verse) => `<li><strong>${esc(verse.verse_reference || "-")}</strong>${
+                verse.verse_reason ? ` - ${esc(verse.verse_reason)}` : ""
+              }</li>`
+            )
+            .join("")}</ol>`
+        : `<p class="news-collector-preview-default">Verse suggestions missing. No existing article-linked verse data was found yet.</p>`;
+      const defaultVerse =
+        card.default_selected_verse && card.default_selected_verse.verse_reference
+          ? `<p class="news-collector-preview-default">Default verse: ${esc(card.default_selected_verse.verse_reference)}</p>`
+          : "";
+      return `<article class="news-collector-preview-card">
+  <div class="news-collector-preview-card-header">
+    <div>
+      <h3 class="news-collector-preview-card-title">${esc(card.title || "Untitled preview card")}</h3>
+      <div class="news-collector-preview-card-meta">${esc(card.source || "-")} | ${esc(card.published_at || "-")}</div>
+    </div>
+    <span class="news-collector-preview-status">${esc(card.status || "preview")}</span>
+  </div>
+  <p class="news-collector-preview-summary">${esc(card.summary || "")}</p>
+  ${card.why_selected ? `<p class="news-collector-preview-why">Why selected: ${esc(card.why_selected)}</p>` : ""}
+  ${verseMarkup}
+  ${defaultVerse}
+  <p class="news-collector-preview-cta">CTA draft: ${esc(card.cta_draft || "-")}</p>
+  <div class="news-collector-preview-actions">
+    <button type="button" class="crew-btn ghost" data-news-collector-action="open-link" data-url="${esc(card.article_url)}">Open Link</button>
+    <button type="button" class="crew-btn ghost" disabled title="Manual Telegram dispatch is not enabled yet.">Send to Telegram</button>
+  </div>
+</article>`;
+    }
+
     function renderScreen() {
       if (root) {
         root.classList.toggle("show-news-collector", appState.selectedModule === MODULE_NAME);
@@ -386,6 +444,7 @@
       const active = appState.selectedModule === MODULE_NAME;
       if (!active) return;
       const count = Array.isArray(state.candidates) ? state.candidates.length : 0;
+      const previewCount = Array.isArray(state.previewCards) ? state.previewCards.length : 0;
       dom.newsCollectorCount.textContent = state.loading
         ? "Loading..."
         : `${count} Candidates | ${Number(state.connectedCount || 0)} Active Feeds`;
@@ -395,9 +454,25 @@
       } else if (state.collecting) {
         dom.newsCollectorEmpty.textContent = "Collecting latest Christian RSS articles and scoring them for PLD-fit...";
       } else if (!count) {
-        dom.newsCollectorEmpty.textContent = "No collected article candidates are ready for review.";
+        dom.newsCollectorEmpty.textContent =
+          "No reviewable candidates found. Active RSS feeds exist, but the current latest-window and PLD selection filters may have returned zero articles. Try collecting again or expanding the latest window.";
       }
       dom.newsCollectorList.innerHTML = count ? state.candidates.map(renderCard).join("") : "";
+      if (dom.newsCollectorPreviewCount) {
+        dom.newsCollectorPreviewCount.textContent = state.loadingPreviewCards ? "Loading..." : `${previewCount} Preview Cards`;
+      }
+      if (dom.newsCollectorPreviewEmpty) {
+        dom.newsCollectorPreviewEmpty.classList.toggle("is-hidden", previewCount > 0);
+        if (state.loadingPreviewCards) {
+          dom.newsCollectorPreviewEmpty.textContent = "Loading stored Telegram preview cards...";
+        } else if (!previewCount) {
+          dom.newsCollectorPreviewEmpty.textContent =
+            "No Telegram preview cards generated yet. Stored preview cards will appear here before any manual Telegram send step.";
+        }
+      }
+      if (dom.newsCollectorPreviewList) {
+        dom.newsCollectorPreviewList.innerHTML = previewCount ? state.previewCards.map(renderPreviewCard).join("") : "";
+      }
     }
 
     function renderModuleConfig() {
@@ -575,6 +650,7 @@
       }
       if (!state.loadedOnce && !state.loading) {
         loadCandidates({ silent: true });
+        loadPreviewCards({ silent: true });
       } else {
         renderScreen();
         renderModuleConfig();
@@ -591,6 +667,7 @@
       const articleId = String(actionTarget.dataset.articleId || state.selectedArticleId || "").trim();
       if (action === "refresh") {
         loadCandidates({ silent: false });
+        loadPreviewCards({ silent: true });
         return true;
       }
       if (action === "modify") {
@@ -687,6 +764,9 @@
       if (!state.feedsLoadedOnce && !state.loadingFeeds) {
         loadFeeds({ silent: true });
       }
+      if (!state.loadingPreviewCards) {
+        loadPreviewCards({ silent: true });
+      }
       if (appState.selectedModule === MODULE_NAME && !state.loadedOnce && !state.loading) {
         loadCandidates({ silent: true });
       }
@@ -697,6 +777,7 @@
       if (appState.selectedModule === MODULE_NAME) {
         if (!state.loadingFeeds) loadFeeds({ silent: true });
         if (!state.loading) loadCandidates({ silent: true });
+        if (!state.loadingPreviewCards) loadPreviewCards({ silent: true });
       }
     }
 

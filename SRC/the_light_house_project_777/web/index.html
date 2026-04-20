@@ -199,8 +199,16 @@
               <button type="button" class="crew-btn ghost" id="news-collector-refresh-btn" data-news-collector-action="refresh">Refresh</button>
             </div>
           </div>
-          <p class="news-collector-empty" id="news-collector-empty">No collected article candidates are ready for review.</p>
+          <p class="news-collector-empty" id="news-collector-empty">No reviewable candidates found. Active RSS feeds exist, but the current latest-window and PLD selection filters may have returned zero articles. Try collecting again or expanding the latest window.</p>
           <div class="news-collector-list" id="news-collector-list"></div>
+          <div class="news-collector-preview-section">
+            <div class="news-collector-preview-header">
+              <h3 class="news-collector-preview-title">Telegram Preview Cards</h3>
+              <span class="queue-summary" id="news-collector-preview-count">0 Preview Cards</span>
+            </div>
+            <p class="news-collector-preview-empty" id="news-collector-preview-empty">No Telegram preview cards generated yet. Stored preview cards will appear here before any manual Telegram send step.</p>
+            <div class="news-collector-preview-list" id="news-collector-preview-list"></div>
+          </div>
         </section>
 
         <section class="crew-card task-queue" id="task-queue">

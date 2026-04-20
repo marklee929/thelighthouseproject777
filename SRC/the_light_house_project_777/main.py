@@ -132,17 +132,19 @@ from repositories import (
     PostgresConnectionFactory,
     PostgresGeneratedContentRepository,
     PostgresIngestionRunRepository,
+    PostgresReviewCardRepository,
     PostgresRssFeedRepository,
     PostgresSourceRepository,
     PostgresSystemConfigRepository,
 )
 from integrations.rss import ArticleContentClient, RssFeedClient, RssFeedRegistryLoader
-from services.analysis import ArticleAnalysisService
+from services.analysis import ArticleAnalysisService, LocalLlmTrioArticleAnalysisService
 from services.ingestion.service import RssIngestionService
 from services.news_collector.collection import NewsCollectorCollectionService
 from services.news_collector.feed_management import NewsCollectorFeedManagementService
+from services.news_collector.pre_storage_filter import NewsCollectorPreStorageFilter
 from services.news_collector.service import NewsCollectorReviewService
-from services.review import FacebookCandidateQueueService
+from services.review import FacebookCandidateQueueService, TelegramPreviewCardService
 from social_automation import SocialAutomationService
 boot_trace("imports complete")
 boot_trace("imported main.py")
@@ -215,6 +217,7 @@ POSTGRES_CONNECTION_FACTORY = PostgresConnectionFactory.from_env()
 POSTGRES_ARTICLE_REPOSITORY = PostgresArticleRepository(POSTGRES_CONNECTION_FACTORY)
 POSTGRES_ARTICLE_REVIEW_REPOSITORY = PostgresArticleReviewRepository(POSTGRES_CONNECTION_FACTORY)
 POSTGRES_GENERATED_CONTENT_REPOSITORY = PostgresGeneratedContentRepository(POSTGRES_CONNECTION_FACTORY)
+POSTGRES_REVIEW_CARD_REPOSITORY = PostgresReviewCardRepository(POSTGRES_CONNECTION_FACTORY)
 POSTGRES_SOURCE_REPOSITORY = PostgresSourceRepository(POSTGRES_CONNECTION_FACTORY)
 POSTGRES_RSS_FEED_REPOSITORY = PostgresRssFeedRepository(POSTGRES_CONNECTION_FACTORY)
 POSTGRES_INGESTION_RUN_REPOSITORY = PostgresIngestionRunRepository(POSTGRES_CONNECTION_FACTORY)
@@ -223,6 +226,8 @@ RSS_FEED_REGISTRY_LOADER = RssFeedRegistryLoader()
 RSS_FEED_CLIENT = RssFeedClient()
 RSS_ARTICLE_CONTENT_CLIENT = ArticleContentClient()
 ARTICLE_ANALYSIS_SERVICE = ArticleAnalysisService(article_repository=POSTGRES_ARTICLE_REPOSITORY)
+NEWS_COLLECTOR_PRE_STORAGE_FILTER = NewsCollectorPreStorageFilter()
+LOCAL_LLM_TRIO_ANALYSIS_SERVICE = LocalLlmTrioArticleAnalysisService(base_analysis_service=ARTICLE_ANALYSIS_SERVICE)
 RSS_INGESTION_SERVICE = RssIngestionService(
     registry_loader=RSS_FEED_REGISTRY_LOADER,
     feed_client=RSS_FEED_CLIENT,
@@ -237,6 +242,10 @@ FACEBOOK_CANDIDATE_QUEUE_SERVICE = FacebookCandidateQueueService(
     article_review_repository=POSTGRES_ARTICLE_REVIEW_REPOSITORY,
     generated_content_repository=POSTGRES_GENERATED_CONTENT_REPOSITORY,
 )
+TELEGRAM_PREVIEW_CARD_SERVICE = TelegramPreviewCardService(
+    article_repository=POSTGRES_ARTICLE_REPOSITORY,
+    review_card_repository=POSTGRES_REVIEW_CARD_REPOSITORY,
+)
 NEWS_COLLECTOR_FEED_MANAGEMENT_SERVICE = NewsCollectorFeedManagementService(
     registry_loader=RSS_FEED_REGISTRY_LOADER,
     source_repository=POSTGRES_SOURCE_REPOSITORY,
@@ -245,13 +254,17 @@ NEWS_COLLECTOR_FEED_MANAGEMENT_SERVICE = NewsCollectorFeedManagementService(
 )
 NEWS_COLLECTOR_COLLECTION_SERVICE = NewsCollectorCollectionService(
     rss_feed_repository=POSTGRES_RSS_FEED_REPOSITORY,
+    article_repository=POSTGRES_ARTICLE_REPOSITORY,
+    ingestion_run_repository=POSTGRES_INGESTION_RUN_REPOSITORY,
     ingestion_service=RSS_INGESTION_SERVICE,
-    analysis_service=ARTICLE_ANALYSIS_SERVICE,
+    pre_storage_filter=NEWS_COLLECTOR_PRE_STORAGE_FILTER,
+    trio_analysis_service=LOCAL_LLM_TRIO_ANALYSIS_SERVICE,
 )
 NEWS_COLLECTOR_REVIEW_SERVICE = NewsCollectorReviewService(
     article_repository=POSTGRES_ARTICLE_REPOSITORY,
     article_review_repository=POSTGRES_ARTICLE_REVIEW_REPOSITORY,
     facebook_candidate_queue_service=FACEBOOK_CANDIDATE_QUEUE_SERVICE,
+    telegram_preview_card_service=TELEGRAM_PREVIEW_CARD_SERVICE,
 )
 
 
@@ -1490,11 +1503,11 @@ def crew_social_facebook_reissue():
 
 @app.route('/api/crew/news-collector/candidates', methods=['GET'])
 def crew_news_collector_candidates():
-    limit = request.args.get('limit', default=24, type=int)
-    safe_limit = max(1, min(int(limit or 24), 100))
+    limit = request.args.get('limit', default=5, type=int)
+    safe_limit = max(1, min(int(limit or 5), 100))
     try:
-        items = NEWS_COLLECTOR_REVIEW_SERVICE.list_candidates(limit=safe_limit)
-        return jsonify({"ok": True, "items": items, "count": len(items)}), 200
+        batch = NEWS_COLLECTOR_REVIEW_SERVICE.list_candidate_batch(limit=safe_limit)
+        return jsonify({"ok": True, "count": len(batch.get("items") or []), **batch}), 200
     except Exception as exc:
         return jsonify({"ok": False, "error": str(exc)}), 500
 
@@ -1557,8 +1570,23 @@ def crew_news_collector_collect():
             item_limit=payload.get("item_limit"),
             recent_hours=payload.get("recent_hours"),
         )
+        if result.get("ok"):
+            preview_result = TELEGRAM_PREVIEW_CARD_SERVICE.sync_preview_cards(limit=5)
+            result["preview_cards_generated"] = int(preview_result.get("generated_count", 0))
+            result["preview_cards_count"] = int(TELEGRAM_PREVIEW_CARD_SERVICE.list_preview_cards(limit=5).get("count", 0))
         status_code = 200 if result.get("ok") else 400
         return jsonify(result), status_code
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
+
+@app.route('/api/crew/news-collector/preview-cards', methods=['GET'])
+def crew_news_collector_preview_cards():
+    limit = request.args.get('limit', default=5, type=int)
+    safe_limit = max(1, min(int(limit or 5), 50))
+    try:
+        result = TELEGRAM_PREVIEW_CARD_SERVICE.list_preview_cards(limit=safe_limit)
+        return jsonify(result), 200
     except Exception as exc:
         return jsonify({"ok": False, "error": str(exc)}), 500
 

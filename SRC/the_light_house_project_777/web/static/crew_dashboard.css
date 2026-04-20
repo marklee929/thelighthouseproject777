@@ -396,6 +396,52 @@
     line-height: 1.5;
 }
 
+.container-crew.show-news-collector #publish-review,
+.container-crew.show-news-collector #command-console {
+    display: none;
+}
+
+.container-crew.show-news-collector .crew-main {
+    grid-template-rows: auto auto auto;
+}
+
+.container-crew.show-news-collector #task-queue {
+    max-height: 208px;
+    overflow: hidden;
+}
+
+.container-crew.show-news-collector .task-queue-list {
+    max-height: 144px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.container-crew.show-news-collector .task-queue-item {
+    gap: 8px;
+    padding: 6px 8px;
+}
+
+.container-crew.show-news-collector .task-name {
+    font-size: 12px;
+}
+
+.container-crew.show-news-collector .task-description {
+    font-size: 10px;
+    line-height: 1.35;
+}
+
+.container-crew.show-news-collector #global-log {
+    min-height: 0;
+    max-height: 292px;
+    overflow: hidden;
+}
+
+.container-crew.show-news-collector .global-log-box {
+    min-height: 150px;
+    max-height: 220px;
+    overflow-y: auto;
+}
+
 .global-log-line {
     padding: 3px 2px;
     border-bottom: 1px dotted #2c3037;

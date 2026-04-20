@@ -35,6 +35,9 @@
     newsCollectorList: document.getElementById("news-collector-list"),
     newsCollectorCount: document.getElementById("news-collector-count"),
     newsCollectorEmpty: document.getElementById("news-collector-empty"),
+    newsCollectorPreviewList: document.getElementById("news-collector-preview-list"),
+    newsCollectorPreviewCount: document.getElementById("news-collector-preview-count"),
+    newsCollectorPreviewEmpty: document.getElementById("news-collector-preview-empty"),
     modal: document.getElementById("draft-preview-modal"),
     modalCategory: document.getElementById("draft-preview-category-input"),
     modalSourceLink: document.getElementById("draft-preview-source-link-input"),
@@ -479,9 +482,9 @@
         label: "Collect Latest Christian News",
         status: collecting ? "running" : candidates.length > 0 ? "completed" : "waiting",
         description: collecting
-          ? "Fetching only the last-hour RSS articles and storing raw content and metadata."
+          ? "Fetching last-hour RSS stories, applying the fast first gate, and keeping only save-worthy items."
           : candidates.length > 0
-          ? `${candidates.length} article candidate(s) survived the fresh-review gate.`
+          ? `${candidates.length} article candidate(s) survived the first gate and were stored for review.`
           : "Start collection to fetch only the last-hour RSS stories.",
       });
       tasks.push({
@@ -489,10 +492,10 @@
         status: collecting || loadingCandidates ? "running" : scoredCount > 0 ? "completed" : "waiting",
         description:
           collecting || loadingCandidates
-            ? "Applying PLD-fit, reaction, operational safety, and freshness ranking."
+            ? "Running the active local LLM trio, then ranking survivors by PLD fit, safety, and freshness."
             : scoredCount > 0
             ? `${scoredCount} candidate(s) already have article scores.`
-            : "Scoring begins immediately after collection and keeps one article per 10-minute bucket.",
+            : "Scoring begins after the first gate and keeps only the top five review cards.",
       });
     }
 

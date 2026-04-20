@@ -24,6 +24,9 @@ class FacebookCandidateQueueService:
         self.generated_content_repository = generated_content_repository
 
     def queue_article(self, article_id: str) -> Dict[str, Any]:
+        return self.queue_article_with_context(article_id)
+
+    def queue_article_with_context(self, article_id: str, *, verse_suggestions: List[Dict[str, Any]] | None = None) -> Dict[str, Any]:
         existing = self.generated_content_repository.find_by_article_and_type(article_id, "facebook_post_candidate")
         if existing:
             return {"ok": True, "already_exists": True, "generated_content_id": existing["generated_content_id"]}
@@ -72,6 +75,7 @@ class FacebookCandidateQueueService:
                         "dominant_pld_stage": article.get("dominant_pld_stage"),
                         "selection_summary": article.get("selection_summary"),
                     },
+                    "bible_verse_suggestions": verse_suggestions or [],
                     "confirm_review": confirm_review or {},
                 },
                 "version_no": 1,
@@ -79,7 +83,12 @@ class FacebookCandidateQueueService:
             }
         )
         self.article_repository.update_selection_status(article_id, "facebook_candidate_created")
-        return {"ok": True, "generated_content_id": generated_content_id, "already_exists": False}
+        return {
+            "ok": True,
+            "generated_content_id": generated_content_id,
+            "already_exists": False,
+            "bible_verse_suggestions": verse_suggestions or [],
+        }
 
     def queue_confirmed_articles(self, limit: int = 20) -> List[Dict[str, Any]]:
         queued: List[Dict[str, Any]] = []

@@ -10,9 +10,9 @@ class TelegramArticleReviewMessageBuilder:
         summary = str(article.get("summary_raw", "")).strip()
         if len(summary) > 700:
             summary = f"{summary[:697].rstrip()}..."
-        selection_summary = str(article.get("selection_summary", "")).strip()
-        if len(selection_summary) > 500:
-            selection_summary = f"{selection_summary[:497].rstrip()}..."
+        reviewer_brief = str(((article.get("analysis_payload") or {}).get("reviewer_brief") or article.get("selection_summary", ""))).strip()
+        if len(reviewer_brief) > 500:
+            reviewer_brief = f"{reviewer_brief[:497].rstrip()}..."
         title = "Christian News Candidate"
         body = (
             f"Source: {article.get('source_name', '-')}\n"
@@ -26,7 +26,7 @@ class TelegramArticleReviewMessageBuilder:
             f"URL: {article.get('canonical_url') or article.get('article_url')}\n\n"
             f"Title:\n{article.get('title', '')}\n\n"
             f"Summary:\n{summary or '-'}\n\n"
-            f"Operator View:\n{selection_summary or '-'}"
+            f"Review Baseline:\n{reviewer_brief or '-'}"
         )
         buttons = [
             [

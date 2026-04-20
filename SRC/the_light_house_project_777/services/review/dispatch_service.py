@@ -37,7 +37,7 @@ class TelegramCandidateDispatchService:
     def sync_reviewers(self) -> List[Dict[str, Any]]:
         return self.reviewer_registry_loader.sync_reviewers(self.reviewer_repository)
 
-    def dispatch_top_candidates(self, limit: int = 1, min_final_score: float = 60.0) -> List[Dict[str, Any]]:
+    def dispatch_top_candidates(self, limit: int = 5, min_final_score: float = 60.0) -> List[Dict[str, Any]]:
         self.sync_reviewers()
         reviewers = [row for row in self.reviewer_repository.list_active_reviewers() if str(row.get("telegram_chat_id", "")).strip()]
         articles = self.article_repository.list_articles_for_selection_review(max(limit * 6, 24), min_final_score)

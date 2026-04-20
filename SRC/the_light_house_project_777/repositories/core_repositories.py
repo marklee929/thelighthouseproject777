@@ -400,6 +400,100 @@ class PostgresArticleRepository:
                 rows = cur.fetchall() or []
         return [dict(row) for row in rows]
 
+    def list_articles_for_telegram_preview(self, limit: int) -> list[dict[str, Any]]:
+        query = """
+            WITH latest_reviews AS (
+                SELECT DISTINCT ON (ar.article_id)
+                    ar.article_id,
+                    ar.decision,
+                    ar.reviewed_at,
+                    ar.review_summary,
+                    ar.suggested_angle,
+                    ar.suggested_question,
+                    ar.operator_note,
+                    ar.review_note
+                FROM core.article_reviews AS ar
+                ORDER BY ar.article_id, ar.reviewed_at DESC, ar.created_at DESC
+            ),
+            published_articles AS (
+                SELECT DISTINCT gc.article_id
+                FROM content.generated_contents AS gc
+                JOIN system.publish_logs AS pl
+                  ON pl.generated_content_id = gc.generated_content_id
+                WHERE pl.publish_status = 'published'
+            ),
+            existing_cards AS (
+                SELECT DISTINCT rc.article_id
+                FROM content.review_cards AS rc
+                WHERE rc.channel = 'telegram'
+                  AND rc.card_type = 'article_review'
+            ),
+            existing_dispatches AS (
+                SELECT DISTINCT td.article_id
+                FROM system.telegram_review_dispatches AS td
+                WHERE td.dispatch_status IN ('queued', 'sent', 'acted')
+            )
+            SELECT
+                a.article_id,
+                a.title,
+                a.summary_raw,
+                a.article_content_raw,
+                a.article_url,
+                a.canonical_url,
+                a.published_at,
+                a.collected_at,
+                a.review_status,
+                a.selection_status,
+                a.reaction_score,
+                a.pld_fit_score,
+                a.operational_score,
+                a.final_score,
+                a.dominant_pld_stage,
+                a.selection_summary,
+                a.analysis_payload,
+                a.article_metadata,
+                s.source_name,
+                s.source_code,
+                f.feed_name,
+                f.feed_code,
+                lr.decision AS latest_review_decision,
+                lr.review_summary,
+                lr.suggested_angle,
+                lr.suggested_question,
+                lr.operator_note,
+                lr.review_note,
+                lr.reviewed_at AS latest_reviewed_at
+            FROM core.articles AS a
+            JOIN core.sources AS s
+              ON s.source_id = a.source_id
+            JOIN core.rss_feeds AS f
+              ON f.rss_feed_id = a.rss_feed_id
+            LEFT JOIN latest_reviews AS lr
+              ON lr.article_id = a.article_id
+            LEFT JOIN existing_cards AS ec
+              ON ec.article_id = a.article_id
+            LEFT JOIN existing_dispatches AS ed
+              ON ed.article_id = a.article_id
+            LEFT JOIN published_articles AS pa
+              ON pa.article_id = a.article_id
+            WHERE a.selection_status NOT IN ('hard_rejected', 'review_rejected', 'review_confirmed', 'facebook_candidate_created', 'review_dropped')
+              AND a.review_status IN ('pending', 'hold')
+              AND COALESCE(lr.decision, 'pending') NOT IN ('confirm', 'reject', 'drop')
+              AND ec.article_id IS NULL
+              AND ed.article_id IS NULL
+              AND pa.article_id IS NULL
+            ORDER BY
+                a.final_score DESC NULLS LAST,
+                a.published_at DESC NULLS LAST,
+                a.collected_at DESC
+            LIMIT %s
+        """
+        with self.connection_factory.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(query, (limit,))
+                rows = cur.fetchall() or []
+        return [dict(row) for row in rows]
+
     def get_by_dedupe_hash(self, dedupe_hash: str) -> Optional[dict[str, Any]]:
         query = """
             SELECT article_id, dedupe_hash, review_status, recommendation_score
@@ -434,11 +528,28 @@ class PostgresArticleRepository:
                 article_content_html,
                 article_content_raw,
                 article_metadata,
+                reaction_score,
+                reaction_breakdown,
+                pld_fit_score,
+                pld_breakdown,
+                dominant_pld_stage,
+                operational_score,
+                operational_breakdown,
+                final_score,
+                selection_summary,
+                hard_reject_reason,
+                analysis_payload,
+                analysis_model,
+                analysis_version,
+                analyzed_at,
+                selection_status,
+                review_status,
                 created_at,
                 updated_at
             )
             VALUES (
                 %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s::jsonb,
+                %s, %s::jsonb, %s, %s::jsonb, %s, %s, %s::jsonb, %s, %s, NULLIF(%s, ''), %s::jsonb, %s, %s, %s, %s, %s,
                 CURRENT_TIMESTAMP,
                 CURRENT_TIMESTAMP
             )
@@ -464,6 +575,22 @@ class PostgresArticleRepository:
             article.get("article_content_html"),
             article.get("article_content_raw"),
             _json_payload(article.get("article_metadata")),
+            article.get("reaction_score"),
+            _json_payload(article.get("reaction_breakdown")),
+            article.get("pld_fit_score"),
+            _json_payload(article.get("pld_breakdown")),
+            article.get("dominant_pld_stage"),
+            article.get("operational_score"),
+            _json_payload(article.get("operational_breakdown")),
+            article.get("final_score"),
+            article.get("selection_summary"),
+            article.get("hard_reject_reason", ""),
+            _json_payload(article.get("analysis_payload")),
+            article.get("analysis_model"),
+            article.get("analysis_version"),
+            article.get("analyzed_at"),
+            article.get("selection_status", "pending_analysis"),
+            article.get("review_status", "pending"),
         )
         with self.connection_factory.connect() as conn:
             with conn.cursor() as cur:
